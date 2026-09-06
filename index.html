@@ -6187,14 +6187,85 @@ function renderArchive(){let list=visibleTasks().filter(x=>x.status==='done').so
 const PLANINT_BACKUP_SCHEMA=1;
 let pendingBackupRestore=null;
 function backupClone(v){return JSON.parse(JSON.stringify(v))}
-function backupPayload(){return {format:'PlanINT Backup',schemaVersion:PLANINT_BACKUP_SCHEMA,appVersion:'V11.8.26',exportedAt:new Date().toISOString(),data:{tasks:backupClone(tasks),projects:backupClone(projects),importantDates:backupClone(importantDates),importLogs:backupClone(importLogs),projectStructures:backupClone(projectStructures),managementStructures:backupClone(managementStructures),workSchedule:backupClone(workSchedule),personalSchedule:backupClone(personalSchedule),habits:backupClone(habits),reminders:backupClone(reminders),weekBaselines:backupClone(weekBaselines)}}}
+function backupDataSnapshot(){return {tasks:backupClone(tasks),projects:backupClone(projects),importantDates:backupClone(importantDates),importLogs:backupClone(importLogs),projectStructures:backupClone(projectStructures),managementStructures:backupClone(managementStructures),workSchedule:backupClone(workSchedule),personalSchedule:backupClone(personalSchedule),habits:backupClone(habits),reminders:backupClone(reminders),weekBaselines:backupClone(weekBaselines)}}
+function backupPayload(){return {format:'PlanINT Backup',schemaVersion:PLANINT_BACKUP_SCHEMA,appVersion:'V11.8.27',exportedAt:new Date().toISOString(),data:backupDataSnapshot()}}
 function backupCounts(data){return {activities:Array.isArray(data.tasks)?data.tasks.length:0,projects:Array.isArray(data.projects)?data.projects.length:0,important:Array.isArray(data.importantDates)?data.importantDates.length:0,habits:Array.isArray(data.habits)?data.habits.length:0,reminders:Array.isArray(data.reminders)?data.reminders.length:0,baselines:data.weekBaselines&&typeof data.weekBaselines==='object'?Object.keys(data.weekBaselines).length:0}}
-function validateBackupPayload(payload){let errors=[],warnings=[];if(!payload||payload.format!=='PlanINT Backup')errors.push('El archivo no corresponde a un respaldo de PlanINT.');if(Number(payload?.schemaVersion)!==PLANINT_BACKUP_SCHEMA)errors.push(`Esquema no compatible: ${payload?.schemaVersion??'sin versión'}. Esta versión acepta Schema ${PLANINT_BACKUP_SCHEMA}.`);let d=payload?.data;if(!d||typeof d!=='object')errors.push('El respaldo no contiene el bloque de datos.');if(d){['tasks','projects','importantDates','importLogs','habits','reminders'].forEach(k=>{if(!Array.isArray(d[k]))errors.push(`Colección inválida: ${k}.`)});['projectStructures','managementStructures','workSchedule','personalSchedule','weekBaselines'].forEach(k=>{if(!d[k]||typeof d[k]!=='object'||Array.isArray(d[k]))errors.push(`Estructura inválida: ${k}.`)});if(Array.isArray(d.tasks)){let ids=new Set();d.tasks.forEach(t=>{let id=String(t?.id??'');if(!id)errors.push('Existe una actividad sin ID.');else if(ids.has(id))errors.push(`ID de actividad duplicado: ${id}.`);ids.add(id)});let originIds=new Set((d.projects||[]).map(o=>String(o.id)));let orphan=d.tasks.filter(t=>t.originId!=null&&t.originId!==''&&!originIds.has(String(t.originId)));if(orphan.length)errors.push(`${orphan.length} actividad(es) tienen un origen inexistente.`);let taskIds=new Set(d.tasks.map(t=>String(t.id)));let recurrentOrphans=d.tasks.filter(t=>t.recurrenceMasterId&&!taskIds.has(String(t.recurrenceMasterId)));if(recurrentOrphans.length)errors.push(`${recurrentOrphans.length} ocurrencia(s) recurrentes no tienen maestro.`)}if(Array.isArray(d.projects)){let ids=new Set();d.projects.forEach(o=>{let id=String(o?.id??'');if(!id)errors.push('Existe un origen sin ID.');else if(ids.has(id))errors.push(`ID de origen duplicado: ${id}.`);ids.add(id)})}}
-return {ok:errors.length===0,errors,warnings}}
-function downloadFullBackup(){try{save();saveBaselines();let payload=backupPayload(),validation=validateBackupPayload(payload);if(!validation.ok){alert('No se generó el respaldo porque se detectaron errores de integridad:\n\n'+validation.errors.join('\n'));return}let blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a'),stamp=new Date().toISOString().replace(/[:.]/g,'-');a.href=url;a.download=`PlanINT_Backup_V11.8.26_${stamp}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);let el=document.getElementById('backupStatus');if(el)el.textContent='Último respaldo generado: '+new Date().toLocaleString('es-MX')}catch(e){console.error('Backup export error',e);alert('No fue posible generar el respaldo. No se modificó ningún dato.')}}
+function backupCanonical(value){if(Array.isArray(value))return value.map(backupCanonical);if(value&&typeof value==='object'){let out={};Object.keys(value).sort().forEach(k=>{out[k]=backupCanonical(value[k])});return out}return value}
+function backupSemanticEqual(a,b){return JSON.stringify(backupCanonical(a))===JSON.stringify(backupCanonical(b))}
+function validateBackupPayload(payload){
+  let errors=[],warnings=[];
+  if(!payload||payload.format!=='PlanINT Backup')errors.push('El archivo no corresponde a un respaldo de PlanINT.');
+  if(Number(payload?.schemaVersion)!==PLANINT_BACKUP_SCHEMA)errors.push(`Esquema no compatible: ${payload?.schemaVersion??'sin versión'}. Esta versión acepta Schema ${PLANINT_BACKUP_SCHEMA}.`);
+  let d=payload?.data;
+  if(!d||typeof d!=='object')errors.push('El respaldo no contiene el bloque de datos.');
+  if(d){
+    ['tasks','projects','importantDates','importLogs','habits','reminders'].forEach(k=>{if(!Array.isArray(d[k]))errors.push(`Colección inválida: ${k}.`)});
+    ['projectStructures','managementStructures','workSchedule','personalSchedule','weekBaselines'].forEach(k=>{if(!d[k]||typeof d[k]!=='object'||Array.isArray(d[k]))errors.push(`Estructura inválida: ${k}.`)});
+    let origins=new Map();
+    if(Array.isArray(d.projects)){
+      let ids=new Set();
+      d.projects.forEach(o=>{let id=String(o?.id??'');if(!id)errors.push('Existe un origen sin ID.');else if(ids.has(id))errors.push(`ID de origen duplicado: ${id}.`);else{ids.add(id);origins.set(id,o)}});
+    }
+    if(Array.isArray(d.tasks)){
+      let ids=new Set();
+      d.tasks.forEach(t=>{let id=String(t?.id??'');if(!id)errors.push('Existe una actividad sin ID.');else if(ids.has(id))errors.push(`ID de actividad duplicado: ${id}.`);ids.add(id)});
+      let taskIds=new Set(d.tasks.map(t=>String(t?.id??'')));
+      let recurrentOrphans=d.tasks.filter(t=>t.recurrenceMasterId&&!taskIds.has(String(t.recurrenceMasterId)));
+      if(recurrentOrphans.length)errors.push(`${recurrentOrphans.length} ocurrencia(s) recurrentes no tienen maestro.`);
+      d.tasks.forEach(t=>{
+        let tid=String(t?.id??'sin ID'),oid=String(t?.originId??''),o=origins.get(oid);
+        if(!oid||!o){errors.push(`Actividad ${tid}: origen inexistente (${oid||'vacío'}).`);return}
+        if(t.scope!==o.scope)errors.push(`Actividad ${tid}: el ámbito no coincide con su origen.`);
+        if(t.originType!==o.type)errors.push(`Actividad ${tid}: el tipo de origen no coincide con su origen.`);
+        if(t.project!==o.name)errors.push(`Actividad ${tid}: el nombre de origen no coincide con originId.`);
+        if(o.type==='project'){
+          let structure=d.projectStructures?.[oid],milestones=Array.isArray(structure?.milestones)?structure.milestones:[];
+          let mid=String(t.milestoneId||''),did=String(t.deliverableId||'');
+          if(mid){
+            let m=milestones.find(x=>String(x?.id)===mid);
+            if(!m)errors.push(`Actividad ${tid}: hito inexistente (${mid}).`);
+            else{
+              if((t.milestone||'')!==(m.name||''))errors.push(`Actividad ${tid}: el nombre del hito no coincide con milestoneId.`);
+              if(did){let e=(m.deliverables||[]).find(x=>String(x?.id)===did);if(!e)errors.push(`Actividad ${tid}: entregable inexistente (${did}).`);else if((t.deliverable||'')!==(e.name||''))errors.push(`Actividad ${tid}: el nombre del entregable no coincide con deliverableId.`)}
+            }
+          }else if(did)errors.push(`Actividad ${tid}: tiene entregable sin hito.`);
+        }else if(o.type==='management'){
+          let cid=String(t.managementCategoryId||'');
+          if(cid){let categories=d.managementStructures?.[oid]?.categories||[],c=categories.find(x=>String(x?.id)===cid);if(!c)errors.push(`Actividad ${tid}: categoría de gestión inexistente (${cid}).`);else if((t.managementCategory||'')!==(c.name||''))errors.push(`Actividad ${tid}: el nombre de la categoría no coincide con managementCategoryId.`)}
+        }
+      });
+    }
+  }
+  return {ok:errors.length===0,errors,warnings}
+}
+function applyBackupDataExact(d){projects=backupClone(d.projects);projectStructures=backupClone(d.projectStructures);managementStructures=backupClone(d.managementStructures);tasks=backupClone(d.tasks);importantDates=backupClone(d.importantDates);importLogs=backupClone(d.importLogs);workSchedule=backupClone(d.workSchedule);personalSchedule=backupClone(d.personalSchedule);habits=backupClone(d.habits);reminders=backupClone(d.reminders);weekBaselines=backupClone(d.weekBaselines)}
+function persistedBackupData(){return {tasks:JSON.parse(localStorage.getItem('mp2_tasks')||'[]'),projects:JSON.parse(localStorage.getItem('mp2_projects')||'[]'),importantDates:JSON.parse(localStorage.getItem('mp2_important')||'[]'),importLogs:JSON.parse(localStorage.getItem('mp2_import_logs')||'[]'),projectStructures:JSON.parse(localStorage.getItem('mp2_project_structures')||'{}'),managementStructures:JSON.parse(localStorage.getItem('mp2_management_structures')||'{}'),workSchedule:JSON.parse(localStorage.getItem('mp2_work_schedule')||'{}'),personalSchedule:JSON.parse(localStorage.getItem('mp2_personal_schedule')||'{}'),habits:JSON.parse(localStorage.getItem('mp2_habits')||'[]'),reminders:JSON.parse(localStorage.getItem('mp2_reminders')||'[]'),weekBaselines:JSON.parse(localStorage.getItem('mp2_week_baselines')||'{}')}}
+function downloadFullBackup(){try{save();saveBaselines();let payload=backupPayload(),validation=validateBackupPayload(payload);if(!validation.ok){alert('No se generó el respaldo porque se detectaron errores de integridad:\n\n'+validation.errors.join('\n'));return}let blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a'),stamp=new Date().toISOString().replace(/[:.]/g,'-');a.href=url;a.download=`PlanINT_Backup_V11.8.27_${stamp}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);let el=document.getElementById('backupStatus');if(el)el.textContent='Último respaldo generado: '+new Date().toLocaleString('es-MX')}catch(e){console.error('Backup export error',e);alert('No fue posible generar el respaldo. No se modificó ningún dato.')}}
 function renderBackupRestorePreview(payload,fileName){let v=validateBackupPayload(payload),d=payload?.data||{},c=backupCounts(d),box=document.getElementById('backupRestoreSummary');let status=v.ok?'<span class="status done">Compatible</span>':'<span class="status late">No compatible</span>';box.innerHTML=`<div class="section-head"><div><h4 style="margin:0">${esc(fileName||'Respaldo')}</h4><div class="file-name">Origen ${esc(payload?.appVersion||'—')} · Schema ${esc(String(payload?.schemaVersion??'—'))} · ${payload?.exportedAt?new Date(payload.exportedAt).toLocaleString('es-MX'):'Fecha no disponible'}</div></div>${status}</div><div class="grid two-col" style="margin-top:12px"><div class="card pad"><b>${c.activities}</b><div class="file-name">Actividades</div></div><div class="card pad"><b>${c.projects}</b><div class="file-name">Orígenes / proyectos / gestiones</div></div><div class="card pad"><b>${c.habits}</b><div class="file-name">Hábitos</div></div><div class="card pad"><b>${c.reminders}</b><div class="file-name">Recordatorios</div></div></div>${v.errors.length?`<div class="notice" style="margin-top:12px"><b>No se puede restaurar:</b><br>${v.errors.map(esc).join('<br>')}</div>`:`<div class="notice" style="margin-top:12px"><b>Validación correcta.</b> Al confirmar se reemplazará el estado local actual por este respaldo. Antes de escribir, PlanINT conserva un snapshot en memoria para revertir si ocurre un error.</div>`}`;document.getElementById('confirmBackupRestore').disabled=!v.ok;pendingBackupRestore=v.ok?payload:null;openModal('backupRestoreModal');icons()}
 function readBackupFile(file){if(!file)return;let reader=new FileReader();reader.onload=()=>{try{let payload=JSON.parse(String(reader.result||''));renderBackupRestorePreview(payload,file.name)}catch(e){pendingBackupRestore=null;renderBackupRestorePreview(null,file.name)}};reader.onerror=()=>alert('No fue posible leer el archivo de respaldo.');reader.readAsText(file)}
-function restoreBackupPayload(){if(!pendingBackupRestore)return;let payload=pendingBackupRestore,v=validateBackupPayload(payload);if(!v.ok){alert('El respaldo dejó de ser válido. No se modificó ningún dato.');return}let snapshot=backupPayload();try{let d=backupClone(payload.data);tasks=d.tasks.map(t=>ensureV8Task(t));projects=d.projects.map(normalizeOrigin);importantDates=d.importantDates;importLogs=d.importLogs;projectStructures=d.projectStructures;managementStructures=d.managementStructures;workSchedule=d.workSchedule;personalSchedule=d.personalSchedule;habits=d.habits;reminders=d.reminders;weekBaselines=d.weekBaselines;ensureOtherOrigins();save();saveBaselines();pendingBackupRestore=null;closeModal('backupRestoreModal');renderAll();refreshVisibleSurface();let el=document.getElementById('backupStatus');if(el)el.textContent='Respaldo restaurado: '+new Date().toLocaleString('es-MX');alert('Restauración completada. Los datos del respaldo fueron cargados correctamente.')}catch(e){console.error('Backup restore error',e);let d=snapshot.data;tasks=d.tasks;projects=d.projects;importantDates=d.importantDates;importLogs=d.importLogs;projectStructures=d.projectStructures;managementStructures=d.managementStructures;workSchedule=d.workSchedule;personalSchedule=d.personalSchedule;habits=d.habits;reminders=d.reminders;weekBaselines=d.weekBaselines;save();saveBaselines();alert('La restauración falló. PlanINT revirtió automáticamente al estado anterior.')}}
+function restoreBackupPayload(){
+  if(!pendingBackupRestore)return;
+  let payload=pendingBackupRestore,v=validateBackupPayload(payload);
+  if(!v.ok){alert('El respaldo dejó de ser válido. No se modificó ningún dato.');return}
+  let snapshot=backupDataSnapshot();
+  try{
+    let expected=backupClone(payload.data);
+    applyBackupDataExact(expected);
+    let inMemory=backupDataSnapshot(),inMemoryValidation=validateBackupPayload({format:'PlanINT Backup',schemaVersion:PLANINT_BACKUP_SCHEMA,data:inMemory});
+    if(!inMemoryValidation.ok)throw new Error('Integridad posterior inválida: '+inMemoryValidation.errors.join(' | '));
+    if(!backupSemanticEqual(expected,inMemory))throw new Error('La restauración modificó datos del respaldo antes de persistir.');
+    save();saveBaselines();
+    let persisted=persistedBackupData(),persistedValidation=validateBackupPayload({format:'PlanINT Backup',schemaVersion:PLANINT_BACKUP_SCHEMA,data:persisted});
+    if(!persistedValidation.ok)throw new Error('Integridad persistida inválida: '+persistedValidation.errors.join(' | '));
+    if(!backupSemanticEqual(expected,persisted))throw new Error('Los datos persistidos no coinciden con el respaldo restaurado.');
+    pendingBackupRestore=null;closeModal('backupRestoreModal');renderAll();refreshVisibleSurface();
+    let el=document.getElementById('backupStatus');if(el)el.textContent='Respaldo restaurado y verificado: '+new Date().toLocaleString('es-MX');
+    alert('Restauración completada. PlanINT verificó la integridad y persistencia local del respaldo.');
+  }catch(e){
+    console.error('Backup restore error',e);applyBackupDataExact(snapshot);save();saveBaselines();
+    alert('La restauración falló o no conservó íntegramente el respaldo. PlanINT revirtió automáticamente al estado anterior.');
+  }
+}
 document.getElementById('downloadBackupBtn').onclick=downloadFullBackup;document.getElementById('restoreBackupBtn').onclick=()=>document.getElementById('restoreBackupFile').click();document.getElementById('restoreBackupFile').onchange=e=>{let f=e.target.files&&e.target.files[0];readBackupFile(f);e.target.value=''};document.getElementById('closeBackupRestore').onclick=()=>{pendingBackupRestore=null;closeModal('backupRestoreModal')};document.getElementById('cancelBackupRestore').onclick=()=>{pendingBackupRestore=null;closeModal('backupRestoreModal')};document.getElementById('confirmBackupRestore').onclick=restoreBackupPayload;
 function renderImports(){let el=document.getElementById('importLog');if(!el)return;el.innerHTML=importLogs.length?importLogs.map(l=>{let o=originById(l.target);return `<div class="import-log-row"><div class="kpi-icon ${l.conflicts?'orange':'green'}"><i data-lucide="${l.conflicts?'triangle-alert':'file-check-2'}"></i></div><div class="task-main"><div class="task-title">${esc(l.file)}</div><div class="task-meta"><span>${new Date(l.date).toLocaleString('es-MX')}</span><span>${o?o.name:(l.target||'Carga general')}</span><span>${l.created} nuevas</span><span>${l.updated} actualizadas</span></div></div><span class="status ${l.conflicts?'important':'done'}">${l.conflicts?l.conflicts+' omitidas':'Completada'}</span></div>`}).join(''):'<div class="empty">Todavía no hay cargas confirmadas.</div>'}
 
