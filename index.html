@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>PlanINT · V11.8.28</title>
+<title>PlanINT · V11.8.29</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -4268,6 +4268,14 @@ svg[data-local-icon]{
 .planint-cloud-session.error .planint-cloud-dot{background:var(--red)}
 @media(max-width:700px){.planint-cloud-gate{padding:16px}.planint-cloud-card{padding:20px}.planint-cloud-session{display:none}}
 
+/* V11.8.29 · Password recovery states */
+.planint-cloud-link{appearance:none;border:0;background:transparent;color:var(--blue2);font:inherit;font-size:11px;font-weight:700;cursor:pointer;padding:3px 0;text-align:center}
+.planint-cloud-link:hover{text-decoration:underline}
+.planint-cloud-actions{display:grid;gap:8px;margin-top:2px}
+.planint-cloud-back{margin-top:8px}
+.planint-cloud-help{font-size:10px;color:var(--muted);line-height:1.5;margin-top:2px}
+
+
 </style>
 
 <style id="v11-8-19-schedule-ui">
@@ -7448,19 +7456,71 @@ function cloudGate(){
   if(gate)return gate;
   gate=document.createElement('div');gate.id='planintCloudGate';gate.className='planint-cloud-gate';
   gate.innerHTML=`<section class="planint-cloud-card" role="dialog" aria-modal="true" aria-labelledby="planintCloudTitle">
-    <div class="planint-cloud-brand"><div class="planint-cloud-mark">PI</div><div><h2 id="planintCloudTitle">Acceso a PlanINT</h2><p>Inicia sesión para cargar tu información sincronizada.</p></div></div>
+    <div class="planint-cloud-brand"><div class="planint-cloud-mark">PI</div><div><h2 id="planintCloudTitle">Acceso a PlanINT</h2><p id="planintCloudSubtitle">Inicia sesión para cargar tu información sincronizada.</p></div></div>
     <form id="planintCloudForm" class="planint-cloud-form">
       <div class="planint-cloud-field"><label for="planintCloudEmail">Correo</label><input id="planintCloudEmail" type="email" autocomplete="username" required></div>
       <div class="planint-cloud-field"><label for="planintCloudPassword">Contraseña</label><input id="planintCloudPassword" type="password" autocomplete="current-password" required></div>
-      <button id="planintCloudSubmit" class="btn primary planint-cloud-submit" type="submit">Iniciar sesión</button>
+      <div class="planint-cloud-actions"><button id="planintCloudSubmit" class="btn primary planint-cloud-submit" type="submit">Iniciar sesión</button>
+      <button id="planintForgotPassword" class="planint-cloud-link" type="button">¿Olvidaste tu contraseña?</button></div>
+    </form>
+    <form id="planintRecoveryRequestForm" class="planint-cloud-form" hidden>
+      <div class="planint-cloud-field"><label for="planintRecoveryEmail">Correo</label><input id="planintRecoveryEmail" type="email" autocomplete="email" required></div>
+      <div class="planint-cloud-help">Te enviaremos un enlace para crear una nueva contraseña.</div>
+      <button id="planintRecoverySend" class="btn primary planint-cloud-submit" type="submit">Enviar enlace de recuperación</button>
+      <button id="planintRecoveryBack" class="planint-cloud-link planint-cloud-back" type="button">Volver a iniciar sesión</button>
+    </form>
+    <form id="planintNewPasswordForm" class="planint-cloud-form" hidden>
+      <div class="planint-cloud-field"><label for="planintNewPassword">Nueva contraseña</label><input id="planintNewPassword" type="password" autocomplete="new-password" minlength="8" required></div>
+      <div class="planint-cloud-field"><label for="planintNewPasswordConfirm">Confirmar contraseña</label><input id="planintNewPasswordConfirm" type="password" autocomplete="new-password" minlength="8" required></div>
+      <button id="planintPasswordUpdate" class="btn primary planint-cloud-submit" type="submit">Guardar nueva contraseña</button>
     </form>
     <div id="planintCloudStatus" class="planint-cloud-status" role="status" aria-live="polite"></div>
   </section>`;
   document.body.appendChild(gate);
   gate.querySelector('#planintCloudForm').addEventListener('submit',signIn);
+  gate.querySelector('#planintForgotPassword').addEventListener('click',showRecoveryRequest);
+  gate.querySelector('#planintRecoveryBack').addEventListener('click',showLogin);
+  gate.querySelector('#planintRecoveryRequestForm').addEventListener('submit',requestPasswordReset);
+  gate.querySelector('#planintNewPasswordForm').addEventListener('submit',updateRecoveredPassword);
   return gate
 }
 function setGateStatus(msg,type=''){let el=document.getElementById('planintCloudStatus');if(el){el.textContent=msg;el.className='planint-cloud-status '+type}}
+function setAuthView(view){
+  const login=document.getElementById('planintCloudForm'), request=document.getElementById('planintRecoveryRequestForm'), update=document.getElementById('planintNewPasswordForm');
+  if(!login||!request||!update)return;
+  login.hidden=view!=='login';request.hidden=view!=='request';update.hidden=view!=='update';
+  const title=document.getElementById('planintCloudTitle'), sub=document.getElementById('planintCloudSubtitle');
+  if(view==='request'){title.textContent='Recuperar contraseña';sub.textContent='Solicita un enlace seguro para restablecer tu acceso.';document.getElementById('planintRecoveryEmail')?.focus()}
+  else if(view==='update'){title.textContent='Crear nueva contraseña';sub.textContent='Define una nueva contraseña para tu cuenta de PlanINT.';document.getElementById('planintNewPassword')?.focus()}
+  else{title.textContent='Acceso a PlanINT';sub.textContent='Inicia sesión para cargar tu información sincronizada.';document.getElementById('planintCloudEmail')?.focus()}
+}
+function showRecoveryRequest(){setGateStatus('');const source=document.getElementById('planintCloudEmail')?.value.trim();if(source)document.getElementById('planintRecoveryEmail').value=source;setAuthView('request')}
+function showLogin(){setGateStatus('');setAuthView('login')}
+async function requestPasswordReset(ev){
+  ev.preventDefault();
+  const email=document.getElementById('planintRecoveryEmail').value.trim(), button=document.getElementById('planintRecoverySend');
+  button.disabled=true;button.textContent='Enviando…';setGateStatus('Solicitando enlace de recuperación…');
+  const redirectTo='https://adriancarrillo1102-bot.github.io/planint/';
+  const {error}=await client.auth.resetPasswordForEmail(email,{redirectTo});
+  button.disabled=false;button.textContent='Enviar enlace de recuperación';
+  if(error){console.error('PLANINT_PASSWORD_RESET_REQUEST',error);setGateStatus('No fue posible enviar el enlace. Intenta nuevamente.','error');return}
+  setGateStatus('Si el correo corresponde a una cuenta habilitada, recibirás un enlace de recuperación. Revisa también correo no deseado.','success')
+}
+async function updateRecoveredPassword(ev){
+  ev.preventDefault();
+  const password=document.getElementById('planintNewPassword').value, confirm=document.getElementById('planintNewPasswordConfirm').value;
+  const button=document.getElementById('planintPasswordUpdate');
+  if(password.length<8){setGateStatus('La nueva contraseña debe tener al menos 8 caracteres.','error');return}
+  if(password!==confirm){setGateStatus('Las contraseñas no coinciden.','error');return}
+  button.disabled=true;button.textContent='Guardando…';setGateStatus('Actualizando contraseña…');
+  const {error}=await client.auth.updateUser({password});
+  button.disabled=false;button.textContent='Guardar nueva contraseña';
+  if(error){console.error('PLANINT_PASSWORD_UPDATE',error);setGateStatus('No fue posible actualizar la contraseña. Solicita un nuevo enlace e intenta nuevamente.','error');return}
+  document.getElementById('planintNewPassword').value='';document.getElementById('planintNewPasswordConfirm').value='';
+  setGateStatus('Contraseña actualizada. Cargando PlanINT…','success');
+  const {data}=await client.auth.getSession();
+  if(data?.session){try{await hydrateForSession(data.session)}catch(err){console.error('PLANINT_RECOVERY_HYDRATE',err);setGateStatus('La contraseña se actualizó, pero no fue posible cargar la información. Recarga la página.','error')}}
+}
 function setGateBusy(busy){let b=document.getElementById('planintCloudSubmit');if(b){b.disabled=busy;b.textContent=busy?'Cargando…':'Iniciar sesión'}}
 function showGate(msg='',type=''){cloudGate().hidden=false;setGateStatus(msg,type)}
 function hideGate(){cloudGate().hidden=true}
@@ -7591,16 +7651,22 @@ async function init(){
   client=window.supabase.createClient(CONFIG.url,CONFIG.publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
   const {data,error}=await client.auth.getSession();
   if(error){showGate('No fue posible validar la sesión.','error');setSessionState('Error de sesión','error');return}
-  if(data.session){setGateStatus('Recuperando información…');try{await hydrateForSession(data.session)}catch(err){console.error('PLANINT_CLOUD_INIT',err);showGate('La sesión existe, pero la información no pudo cargarse. La nube no fue modificada.','error');setSessionState('Error de carga','error')}}else showGate();
-  client.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_OUT'){hydrated=false;showGate('Sesión cerrada. La caché local se conserva.');setSessionState('Sesión cerrada')}});
+  const recoveryHash=location.hash.includes('type=recovery')||location.search.includes('type=recovery');
+  if(data.session && !recoveryHash){setGateStatus('Recuperando información…');try{await hydrateForSession(data.session)}catch(err){console.error('PLANINT_CLOUD_INIT',err);showGate('La sesión existe, pero la información no pudo cargarse. La nube no fue modificada.','error');setSessionState('Error de carga','error')}}
+  else if(recoveryHash){showGate('Validando enlace de recuperación…');setAuthView('update')}
+  else showGate();
+  client.auth.onAuthStateChange((event,session)=>{
+    if(event==='PASSWORD_RECOVERY'){hydrated=false;cloudGate().hidden=false;setAuthView('update');setGateStatus('Enlace validado. Define tu nueva contraseña.','success');setSessionState('Recuperación de acceso')}
+    else if(event==='SIGNED_OUT'){hydrated=false;showGate('Sesión cerrada. La caché local se conserva.');showLogin();setSessionState('Sesión cerrada')}
+  });
 }
-window.PlanINTCloud={logout:logout,isHydrated:()=>hydrated,mode:'read-only',version:'11.8.28'};
+window.PlanINTCloud={logout:logout,isHydrated:()=>hydrated,mode:'read-only',version:'11.8.29'};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
 </script>
 
 
-<!-- V11.8.28 · Supabase read-only hydration; localStorage remains cache/local write path. -->
+<!-- V11.8.29 · Password recovery via Supabase Auth; cloud data remains read-only. -->
 <!-- V11.8.3
 REQ-HAB-SCOPE-01 editingHabitId tiene una única fuente de verdad accesible al motor global y a la IIFE visual.
 REQ-HAB-SCOPE-02 openHabitTracking se define dentro de la IIFE que contiene openHabitModal.
