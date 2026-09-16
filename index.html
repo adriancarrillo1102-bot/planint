@@ -3,10 +3,11 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>PlanINT · V11.8.8</title>
+<title>PlanINT · V11.8.28</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{--navy:#17233d;--blue:#243b64;--blue2:#31558a;--soft:#eef3f8;--panel:#fff;--text:#1c2738;--muted:#7d8998;--line:#dce4ec;--yellow:#f4c542;--orange:#f08a24;--red:#d9534f;--green:#2fa36b;--purple:#7561b3;--shadow:0 12px 30px rgba(25,45,78,.08);--radius:18px}
 *{box-sizing:border-box}body{margin:0;font-family:Poppins,Arial,sans-serif;background:#f4f7fb;color:var(--text)}button,input,select,textarea{font:inherit}.app{display:grid;grid-template-columns:260px 1fr;min-height:100vh}.sidebar{background:linear-gradient(180deg,#18253f,#21375b);color:#fff;padding:22px 18px;position:sticky;top:0;height:100vh;overflow:auto}.brand{display:flex;align-items:center;gap:12px;padding:4px 8px 20px}.brand-mark{width:42px;height:42px;border-radius:13px;background:#fff1;display:grid;place-items:center;border:1px solid #ffffff20}.brand h1{font-size:18px;margin:0}.brand span{font-size:11px;color:#b9c5d5}.scope-box{background:#ffffff0d;border:1px solid #ffffff12;border-radius:14px;padding:8px;margin-bottom:14px}.scope-label{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#92a4bb;padding:3px 5px 7px}.scope-switch{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}.scope-switch button{border:0;border-radius:9px;background:transparent;color:#aebdce;padding:8px 4px;font-size:10px;cursor:pointer}.scope-switch button.active{background:#fff;color:var(--navy);font-weight:700}.nav-section{font-size:10px;text-transform:uppercase;letter-spacing:1.3px;color:#8fa0b8;padding:14px 10px 7px}.nav-item{display:flex;align-items:center;gap:12px;width:100%;border:0;background:transparent;color:#c9d4e1;padding:11px 12px;border-radius:12px;cursor:pointer;text-align:left}.nav-item:hover{background:#ffffff10;color:#fff}.nav-item.active{background:#ffffff16;color:#fff;box-shadow:inset 3px 0 0 #6fb0ff}.nav-item svg{width:18px}.nav-badge{margin-left:auto;background:#ffffff18;padding:2px 7px;border-radius:20px;font-size:10px}.main{min-width:0}.topbar{height:76px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:20} .page-title{min-width:180px}.plan-title{margin:0;font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:var(--blue2);font-weight:700}.page-title h2{margin:1px 0 0;font-size:20px;line-height:1.15}.page-title p{margin:2px 0 0;color:var(--muted);font-size:11px}.top-scope{display:flex;align-items:center;gap:4px;background:#f3f6fa;border:1px solid var(--line);padding:4px;border-radius:13px}.top-scope button{border:0;background:transparent;color:#69798d;border-radius:9px;padding:7px 11px;font-size:10px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px}.top-scope button.active{background:#fff;color:var(--blue2);box-shadow:0 2px 8px rgba(31,55,88,.08)}.sidebar-close{display:none;position:absolute;right:12px;top:12px;width:34px;height:34px;border:0;border-radius:10px;background:#ffffff12;color:#fff;align-items:center;justify-content:center;cursor:pointer}.sidebar-backdrop{display:none}.top-actions{display:flex;gap:10px;align-items:center}.icon-btn,.btn{border:0;border-radius:11px;cursor:pointer;display:inline-flex;align-items:center;gap:8px}.icon-btn{width:40px;height:40px;justify-content:center;background:#f1f4f8;color:var(--blue)}.btn{padding:10px 14px;background:#edf2f7;color:var(--blue);font-weight:600;font-size:12px}.btn.primary{background:var(--blue2);color:white}.btn.warning{background:#fff3dc;color:#b96800}.btn.success{background:#e7f7ef;color:#238657}.btn.active{background:#dfeaf7;color:#244e80}.content{padding:26px;max-width:1500px;margin:auto}.view{display:none}.view.active{display:block}.grid{display:grid;gap:18px}.grid.kpi{grid-template-columns:repeat(4,1fr)}.two-col{grid-template-columns:1.35fr .85fr}.three-col{grid-template-columns:repeat(3,1fr)}.card{background:var(--panel);border:1px solid #e5ebf1;border-radius:var(--radius);box-shadow:var(--shadow)}.card.pad{padding:18px}.kpi-card{padding:18px;display:flex;gap:14px;align-items:center}.kpi-icon{width:46px;height:46px;border-radius:14px;display:grid;place-items:center}.kpi-icon.blue{background:#eaf1fb;color:#315b90}.kpi-icon.orange{background:#fff0e1;color:#d77614}.kpi-icon.green{background:#e9f7ef;color:#2f9b69}.kpi-icon.yellow{background:#fff7d8;color:#c59500}.kpi-icon.purple{background:#f0edf9;color:#7561b3}.kpi-card strong{font-size:24px;display:block}.kpi-card span{font-size:11px;color:var(--muted)}.section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}.section-head h3{margin:0;font-size:15px}.section-head small{color:var(--muted)}.task-list{display:flex;flex-direction:column;gap:10px}.task{border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;gap:12px;align-items:flex-start;background:#fff}.check{width:22px;height:22px;border-radius:7px;border:2px solid #b8c4d2;margin-top:2px;cursor:pointer;display:grid;place-items:center}.check.done{background:var(--green);border-color:var(--green);color:#fff}.task-main{flex:1;min-width:0}.task-title{font-size:13px;font-weight:600}.task-meta{font-size:11px;color:var(--muted);margin-top:5px;display:flex;gap:10px;flex-wrap:wrap}.status{font-size:10px;padding:4px 8px;border-radius:20px;font-weight:600;white-space:nowrap}.status.pending{background:#eef2f6;color:#68788b}.status.scheduled{background:#eaf1fb;color:#305f96}.status.progress{background:#fff4dc;color:#bc7600}.status.done{background:#e7f7ef;color:#27885b}.status.late{background:#fde8e7;color:#bd4742}.status.important{background:#fff0dc;color:#c06700}.status.urgent{background:#fff0dc;color:#b96500}.status.critical{background:#fde8e7;color:#b63d38}.status.missed{background:#fde8e7;color:#bd4742}.replan-badge{font-size:10px;padding:4px 8px;border-radius:20px;background:#fff0dc;color:#b96500;font-weight:700}.history-line{font-size:10px;color:var(--muted);margin-top:6px}.task.missed-task{border-color:#f0c3bf;background:#fffafa}.modal-subtitle{font-size:11px;color:var(--muted);margin-top:3px}.tag{font-size:10px;padding:3px 7px;border-radius:6px;background:#f1f4f7;color:#66778c}
@@ -4246,6 +4247,27 @@ svg[data-local-icon]{
 .availability-scope-selector{margin:0 0 16px;max-width:360px}.availability-scope-selector button.active{background:#eaf2ff;color:#315b90;font-weight:700}
 .completion-modal-modern{width:min(900px,96vw)}.completion-modern-head{padding:22px 26px}.completion-head-title{display:flex;align-items:center;gap:14px}.completion-head-icon{width:48px;height:48px;border-radius:15px;background:#eaf2ff;color:#285e9d;display:grid;place-items:center}.completion-modern-head h3{font-size:22px;color:#142746}.completion-modern-body{padding:20px 26px 24px}.completion-task-summary{display:grid;grid-template-columns:110px 1fr auto;gap:20px;align-items:center;padding:20px;border:1px solid #dce6f2;border-radius:18px;background:#f9fbfe}.completion-date-tile{height:126px;border-radius:18px;background:#e8f1ff;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#173b69}.completion-date-tile span{font-weight:800}.completion-date-tile strong{font-size:34px;line-height:1.1}.completion-date-tile small{font-size:14px}.completion-task-copy h3{margin:0 0 9px;font-size:22px;color:#122644}.completion-task-meta{display:flex;flex-wrap:wrap;gap:12px;color:#536a86;font-size:13px}.completion-task-meta span+span{border-left:1px solid #d6e0ec;padding-left:12px}.completion-task-desc{margin-top:10px;color:#64758a;font-size:13px}.completion-section{margin-top:22px}.completion-section-title{display:flex;gap:14px;align-items:center;margin-bottom:12px}.completion-section-title>span{width:42px;height:42px;border-radius:50%;background:#285e9d;color:#fff;display:grid;place-items:center;font-weight:800;font-size:18px}.completion-section-title h4{margin:0;color:#142746;font-size:17px}.completion-section-title small{color:#667b95}.completion-execution-card{padding:18px;border-radius:18px;background:#f4f8fd}.completion-execution-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.completion-time-comparison{margin-top:14px;display:grid;grid-template-columns:repeat(3,1fr);background:#eaf2ff;border-radius:14px;padding:14px}.completion-time-comparison>div{padding:0 18px;border-right:1px solid #cad9eb}.completion-time-comparison>div:last-child{border-right:0}.completion-time-comparison small,.completion-time-comparison strong{display:block}.completion-time-comparison strong{font-size:18px;color:#163963;margin-top:3px}.completion-variance-badge{display:inline-flex;margin-top:5px;padding:3px 8px;border-radius:999px;font-size:10px;font-weight:700}.completion-variance-badge.ok{background:#ddf5e6;color:#177849}.completion-variance-badge.warn{background:#fff1d8;color:#9a6100}.completion-char-count{text-align:right;color:#667b95;font-size:11px;margin-top:4px}.completion-checklist-card{display:flex;flex-direction:column;gap:4px;padding:18px 20px;border-radius:16px;background:#fff4df;border:1px solid #f5dfb2;color:#6d4a12}.completion-checklist-card strong{font-size:14px}.completion-checklist-card span{font-size:12px}.completion-modern-foot{padding:18px 26px;position:sticky;bottom:0;background:#fff;z-index:2}.completion-modern-foot .btn{min-height:48px}
 @media(max-width:760px){.completion-modal-modern{width:100%;max-height:94vh}.completion-modern-head{padding:16px 18px}.completion-modern-head h3{font-size:18px}.completion-modern-body{padding:14px 16px 18px}.completion-task-summary{grid-template-columns:72px 1fr;padding:14px;gap:12px}.completion-date-tile{height:92px}.completion-task-summary>#completionTaskStatus{grid-column:2}.completion-task-copy h3{font-size:18px}.completion-execution-grid{grid-template-columns:1fr 1fr}.completion-time-comparison{grid-template-columns:1fr 1fr 1fr;padding:10px}.completion-time-comparison>div{padding:0 8px}.completion-time-comparison strong{font-size:14px}.completion-modern-foot{padding:12px 16px}.completion-modern-foot .btn{flex:1}.work-schedule-row{grid-template-columns:1fr 1fr}.work-schedule-row>label:first-child{grid-column:1/-1}}
+
+/* V11.8.28 · Supabase auth/read bootstrap. AFAL Skin; no business logic duplication. */
+.planint-cloud-gate{position:fixed;inset:0;z-index:10000;background:#f4f7fb;display:flex;align-items:center;justify-content:center;padding:24px}
+.planint-cloud-gate[hidden]{display:none}
+.planint-cloud-card{width:min(440px,100%);background:#fff;border:1px solid var(--line);border-radius:18px;padding:24px;box-shadow:var(--shadow)}
+.planint-cloud-brand{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.planint-cloud-mark{width:42px;height:42px;border-radius:13px;background:#eef3f8;color:var(--blue2);display:grid;place-items:center;font-weight:700}
+.planint-cloud-card h2{font-size:18px;margin:0}.planint-cloud-card p{font-size:11px;color:var(--muted);margin:5px 0 0;line-height:1.5}
+.planint-cloud-form{display:grid;gap:12px;margin-top:18px}.planint-cloud-field{display:grid;gap:6px}
+.planint-cloud-field label{font-size:10px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.5px}
+.planint-cloud-field input{width:100%;border:1px solid var(--line);border-radius:11px;padding:11px 12px;outline:0;background:#fff;color:var(--text)}
+.planint-cloud-field input:focus{border-color:#7f9fc4;box-shadow:0 0 0 3px #edf3f9}
+.planint-cloud-submit{width:100%;justify-content:center;margin-top:2px}
+.planint-cloud-status{min-height:18px;margin-top:12px;font-size:11px;color:var(--muted)}
+.planint-cloud-status.error{color:var(--red)}.planint-cloud-status.success{color:var(--green)}
+.planint-cloud-session{display:flex;align-items:center;gap:8px;font-size:10px;color:var(--muted);max-width:240px}
+.planint-cloud-dot{width:8px;height:8px;border-radius:50%;background:#aab5c2;flex:0 0 auto}
+.planint-cloud-session.online .planint-cloud-dot{background:var(--green)}
+.planint-cloud-session.error .planint-cloud-dot{background:var(--red)}
+@media(max-width:700px){.planint-cloud-gate{padding:16px}.planint-cloud-card{padding:20px}.planint-cloud-session{display:none}}
+
 </style>
 
 <style id="v11-8-19-schedule-ui">
@@ -7391,6 +7413,194 @@ icons();
 </script>
 
 
+
+<script>
+/* V11.8.28
+REQ-CLOUD-01 Autenticación Supabase con publishable key; sin secretos privilegiados.
+REQ-CLOUD-02 Supabase es fuente de hidratación al autenticar; localStorage queda como caché local.
+REQ-CLOUD-03 La hidratación es read-only: V11.8.28 no escribe tablas cloud.
+REQ-CLOUD-04 El bootstrap local existente termina antes de aplicar snapshot cloud.
+REQ-CLOUD-05 Error de red/autenticación no borra ni sobreescribe datos cloud.
+REQ-CLOUD-06 Reconstruir relaciones por IDs cliente: origen/hito/entregable/categoría/checklist/programación.
+REQ-CLOUD-07 Logout bloquea la interfaz sin eliminar caché PlanINT.
+*/
+(function PlanINTCloudV11828(){
+'use strict';
+const CONFIG={
+  url:'https://asgnclhjqeawcjexnfsa.supabase.co',
+  publishableKey:'sb_publishable_mIVE-gdykqEXTVAPtuasOw_XfrkK8PK'
+};
+const TABLES=[
+ 'planint_user_state','planint_origins','planint_milestones','planint_deliverables',
+ 'planint_management_categories','planint_activities','planint_checklist_items',
+ 'planint_schedule_history','planint_important_dates','planint_habits','planint_habit_tracking',
+ 'planint_reminders','planint_availability_profiles','planint_availability_days',
+ 'planint_week_baselines','planint_week_baseline_items','planint_import_logs'
+];
+let client=null, hydrated=false;
+
+function timeHM(v){return v?String(v).slice(0,5):''}
+function isoOrNull(v){return v||null}
+function sourceIso(row){return row.source_created_at||row.created_at||new Date().toISOString()}
+function byId(rows){return new Map(rows.map(x=>[String(x.id),x]))}
+function cloudGate(){
+  let gate=document.getElementById('planintCloudGate');
+  if(gate)return gate;
+  gate=document.createElement('div');gate.id='planintCloudGate';gate.className='planint-cloud-gate';
+  gate.innerHTML=`<section class="planint-cloud-card" role="dialog" aria-modal="true" aria-labelledby="planintCloudTitle">
+    <div class="planint-cloud-brand"><div class="planint-cloud-mark">PI</div><div><h2 id="planintCloudTitle">Acceso a PlanINT</h2><p>Inicia sesión para cargar tu información sincronizada.</p></div></div>
+    <form id="planintCloudForm" class="planint-cloud-form">
+      <div class="planint-cloud-field"><label for="planintCloudEmail">Correo</label><input id="planintCloudEmail" type="email" autocomplete="username" required></div>
+      <div class="planint-cloud-field"><label for="planintCloudPassword">Contraseña</label><input id="planintCloudPassword" type="password" autocomplete="current-password" required></div>
+      <button id="planintCloudSubmit" class="btn primary planint-cloud-submit" type="submit">Iniciar sesión</button>
+    </form>
+    <div id="planintCloudStatus" class="planint-cloud-status" role="status" aria-live="polite"></div>
+  </section>`;
+  document.body.appendChild(gate);
+  gate.querySelector('#planintCloudForm').addEventListener('submit',signIn);
+  return gate
+}
+function setGateStatus(msg,type=''){let el=document.getElementById('planintCloudStatus');if(el){el.textContent=msg;el.className='planint-cloud-status '+type}}
+function setGateBusy(busy){let b=document.getElementById('planintCloudSubmit');if(b){b.disabled=busy;b.textContent=busy?'Cargando…':'Iniciar sesión'}}
+function showGate(msg='',type=''){cloudGate().hidden=false;setGateStatus(msg,type)}
+function hideGate(){cloudGate().hidden=true}
+function sessionIndicator(){
+  let host=document.querySelector('.top-actions');if(!host)return null;
+  let el=document.getElementById('planintCloudSession');
+  if(!el){el=document.createElement('div');el.id='planintCloudSession';el.className='planint-cloud-session';el.innerHTML='<span class="planint-cloud-dot"></span><span id="planintCloudSessionText">Sin conexión</span>';host.prepend(el)}
+  return el
+}
+function setSessionState(text,state=''){let el=sessionIndicator();if(!el)return;el.className='planint-cloud-session '+state;let t=document.getElementById('planintCloudSessionText');if(t)t.textContent=text}
+
+async function signIn(ev){
+  ev.preventDefault();setGateBusy(true);setGateStatus('Validando acceso…');
+  const email=document.getElementById('planintCloudEmail').value.trim();
+  const password=document.getElementById('planintCloudPassword').value;
+  const {data,error}=await client.auth.signInWithPassword({email,password});
+  if(error){setGateBusy(false);setGateStatus('No fue posible iniciar sesión. Verifica tus datos.','error');setSessionState('Acceso no iniciado','error');return}
+  try{await hydrateForSession(data.session)}catch(err){console.error('PLANINT_CLOUD_HYDRATE',err);setGateBusy(false);setGateStatus('Sesión válida, pero no fue posible cargar la información. La nube no fue modificada.','error');setSessionState('Error de carga','error')}
+}
+async function fetchAll(){
+  const pairs=await Promise.all(TABLES.map(async table=>{
+    const {data,error}=await client.from(table).select('*');
+    if(error)throw new Error(table+': '+error.message);
+    return [table,data||[]]
+  }));
+  return Object.fromEntries(pairs)
+}
+function buildSnapshot(db){
+  const origins=db.planint_origins||[], milestones=db.planint_milestones||[], deliverables=db.planint_deliverables||[];
+  const categories=db.planint_management_categories||[], acts=db.planint_activities||[];
+  const checklist=db.planint_checklist_items||[], schedules=db.planint_schedule_history||[];
+  const originUuid=byId(origins), milestoneUuid=byId(milestones), deliverableUuid=byId(deliverables), categoryUuid=byId(categories), activityUuid=byId(acts);
+  const originClient=new Map(origins.map(o=>[String(o.id),o.client_id]));
+  const activityClient=new Map(acts.map(a=>[String(a.id),a.client_id]));
+
+  const projectsCloud=origins.map(o=>({id:o.client_id,name:o.name,type:o.kind,scope:o.scope,desc:o.description||'',progress:o.progress===null?undefined:Number(o.progress),archived:!!o.archived,createdAt:sourceIso(o),updatedAt:o.updated_at||sourceIso(o)}));
+
+  const projectStructuresCloud={};
+  origins.filter(o=>o.kind==='project').forEach(o=>{
+    projectStructuresCloud[String(o.client_id)]={originId:String(o.client_id),version:1,milestones:milestones.filter(m=>String(m.origin_id)===String(o.id)).map(m=>({
+      id:m.client_key,name:m.name,createdAt:sourceIso(m),desc:m.description||'',owner:m.owner||'',dueDate:m.due_date||'',status:m.status||'pending',completedAt:isoOrNull(m.completed_at),
+      deliverables:deliverables.filter(d=>String(d.milestone_id)===String(m.id)).map(d=>({id:d.client_key,name:d.name,createdAt:sourceIso(d),desc:d.description||'',owner:d.owner||'',dueDate:d.due_date||'',status:d.status||'pending',acceptance:d.acceptance||'',evidence:d.evidence||'',completedAt:isoOrNull(d.completed_at)}))
+    }))}
+  });
+  const managementStructuresCloud={};
+  origins.filter(o=>o.kind==='management').forEach(o=>{
+    managementStructuresCloud[String(o.client_id)]={originId:String(o.client_id),version:1,categories:categories.filter(c=>String(c.origin_id)===String(o.id)).map(c=>({id:c.client_key,name:c.name,desc:c.description||'',archived:!!c.archived,createdAt:sourceIso(c)}))}
+  });
+
+  const tasksCloud=acts.map(a=>{
+    const o=originUuid.get(String(a.origin_id)), m=milestoneUuid.get(String(a.milestone_id)), d=deliverableUuid.get(String(a.deliverable_id)), c=categoryUuid.get(String(a.management_category_id));
+    const master=a.recurrence_master_id?activityUuid.get(String(a.recurrence_master_id)):null;
+    const t={id:a.client_id,name:a.name,scope:a.scope,project:o?.name||'Otro',originId:o?.client_id||null,originType:o?.kind||'other',
+      status:a.status,priority:a.priority,urgency:a.urgency,time:a.estimated_duration_raw||'—',nature:a.nature||'unique',intake:a.intake||'planned',
+      tentativeDate:a.tentative_date||'',description:a.description||'',notes:a.notes||'',milestoneId:m?.client_key||'',deliverableId:d?.client_key||'',
+      milestone:m?.name||'',deliverable:d?.name||'',managementCategoryId:c?.client_key||'',managementCategory:c?.name||'',
+      responsibilityRole:a.responsibility_role||'executor',checklistEnabled:!!a.checklist_enabled,checklist:[],scheduleHistory:[],
+      createdAt:sourceIso(a),originHistory:a.origin_history||[],closingComments:a.closing_comments||'',actualMinutes:Number(a.actual_minutes||0),
+      actualStart:timeHM(a.actual_start),actualEnd:timeHM(a.actual_end),completedDate:a.completed_date||'',completedAt:isoOrNull(a.completed_at),
+      postponeHistory:a.postpone_history||[]};
+    if(a.is_recurring_master){t.isRecurringMaster=true;t.recurrence={freq:a.recurrence_freq||'weekly',days:a.recurrence_days||[],time:timeHM(a.recurrence_time)||'08:00',start:a.recurrence_start||'',end:a.recurrence_end||''}}
+    if(master)t.recurrenceMasterId=master.client_id;
+    if(a.recurrence_date)t.recurrenceDate=a.recurrence_date;
+    return t
+  });
+  const taskMap=new Map(tasksCloud.map(t=>[String(t.id),t]));
+  checklist.forEach(i=>{const aid=activityClient.get(String(i.activity_id)),t=taskMap.get(String(aid));if(t)t.checklist.push({id:i.client_id,text:i.item_text||'',done:!!i.done,completedAt:isoOrNull(i.completed_at)})});
+  taskMap.forEach(t=>t.checklist.sort((x,y)=>(checklist.find(i=>String(i.client_id)===String(x.id))?.sort_order||0)-(checklist.find(i=>String(i.client_id)===String(y.id))?.sort_order||0)));
+  schedules.forEach(s=>{const aid=activityClient.get(String(s.activity_id)),t=taskMap.get(String(aid));if(!t)return;const related=s.related_activity_id?activityClient.get(String(s.related_activity_id)):null;t.scheduleHistory.push({id:s.client_id,date:s.scheduled_date,start:timeHM(s.start_time),duration:s.duration_raw||'—',plannedAt:s.planned_at,result:s.result,generatedByRule:!!s.generated_by_rule,unplanned:!!s.unplanned,missedAt:isoOrNull(s.missed_at),completedAt:isoOrNull(s.completed_at),completedDate:s.completed_date||'',rescheduledAt:isoOrNull(s.rescheduled_at),changeReason:s.change_reason||'',relatedTaskId:related||null})});
+
+  const importantCloud=(db.planint_important_dates||[]).map(x=>({id:x.client_id,name:x.name,scope:x.scope,date:x.event_date,type:x.event_type||'',notes:x.notes||''}));
+  const trackingByHabit=new Map();
+  (db.planint_habit_tracking||[]).forEach(x=>{let z=trackingByHabit.get(String(x.habit_id));if(!z){z=[];trackingByHabit.set(String(x.habit_id),z)}z.push(x)});
+  const habitsCloud=(db.planint_habits||[]).map(h=>{const rows=trackingByHabit.get(String(h.id))||[],tracking={},checks={};rows.forEach(r=>{tracking[r.tracking_date]=r.status|| (r.checked?'done':'pending');if(r.checked)checks[r.tracking_date]=true});return {id:h.client_id,name:h.name,scope:h.scope,targetDays:h.target_days||[],active:!!h.active,checks,tracking,createdAt:h.source_created_at||h.created_at,updatedAt:h.source_updated_at||h.updated_at}});
+  const remindersCloud=(db.planint_reminders||[]).map(r=>({id:r.client_id,title:r.title,date:r.reminder_date,time:timeHM(r.reminder_time),scope:r.scope,note:r.note||'',active:!!r.active,createdAt:r.source_created_at||r.created_at,updatedAt:r.source_updated_at||r.updated_at}));
+
+  function availability(scope){
+    const p=(db.planint_availability_profiles||[]).find(x=>x.scope===scope);if(!p)return null;
+    return {version:p.version||1,breakMinutes:Number(p.break_minutes||0),days:(db.planint_availability_days||[]).filter(x=>String(x.profile_id)===String(p.id)).sort((a,b)=>a.day_of_week-b.day_of_week).map(x=>({day:x.day_of_week,name:x.day_name,active:!!x.active,start:timeHM(x.start_time),end:timeHM(x.end_time)}))}
+  }
+  const baselineItems=db.planint_week_baseline_items||[], baselinesCloud={};
+  (db.planint_week_baselines||[]).forEach(b=>{baselinesCloud[b.week_start]={id:b.client_id,start:b.week_start,end:b.week_end,confirmedAt:b.confirmed_at,items:baselineItems.filter(i=>String(i.baseline_id)===String(b.id)).map(i=>({taskId:activityClient.get(String(i.activity_id))||null,scheduleId:(db.planint_schedule_history||[]).find(s=>String(s.id)===String(i.schedule_history_id))?.client_id||null,date:i.scheduled_date,start:timeHM(i.start_time),duration:i.duration_raw||'—',originId:originClient.get(String(i.origin_id))||null,name:i.captured_name||'',capturedAt:i.captured_at}))}});
+  return {tasks:tasksCloud,projects:projectsCloud,importantDates:importantCloud,importLogs:(db.planint_import_logs||[]).map(x=>x.payload||{}),projectStructures:projectStructuresCloud,managementStructures:managementStructuresCloud,workSchedule:availability('work'),personalSchedule:availability('personal'),habits:habitsCloud,reminders:remindersCloud,weekBaselines:baselinesCloud}
+}
+function cacheSnapshot(s){
+  localStorage.setItem('mp2_tasks',JSON.stringify(s.tasks));
+  localStorage.setItem('mp2_projects',JSON.stringify(s.projects));
+  localStorage.setItem('mp2_origins',JSON.stringify(s.projects));
+  localStorage.setItem('mp2_important',JSON.stringify(s.importantDates));
+  localStorage.setItem('mp2_import_logs',JSON.stringify(s.importLogs));
+  localStorage.setItem('mp2_project_structures',JSON.stringify(s.projectStructures));
+  localStorage.setItem('mp2_management_structures',JSON.stringify(s.managementStructures));
+  if(s.workSchedule)localStorage.setItem('mp2_work_schedule',JSON.stringify(s.workSchedule));
+  if(s.personalSchedule)localStorage.setItem('mp2_personal_schedule',JSON.stringify(s.personalSchedule));
+  localStorage.setItem('mp2_habits',JSON.stringify(s.habits));
+  localStorage.setItem('mp2_reminders',JSON.stringify(s.reminders));
+  localStorage.setItem('mp2_week_baselines',JSON.stringify(s.weekBaselines));
+  localStorage.setItem('mp2_cloud_cache_meta',JSON.stringify({version:'11.8.28',hydratedAt:new Date().toISOString()}))
+}
+function applySnapshot(s){
+  tasks=s.tasks;projects=s.projects;importantDates=s.importantDates;importLogs=s.importLogs;
+  projectStructures=s.projectStructures;managementStructures=s.managementStructures;
+  if(s.workSchedule)workSchedule=s.workSchedule;if(s.personalSchedule)personalSchedule=s.personalSchedule;
+  habits=s.habits;reminders=s.reminders;weekBaselines=s.weekBaselines;
+  /* Primero se conserva exactamente el snapshot cloud; después el Core aplica sus
+     normalizadores/recurrencias existentes y save() actualiza únicamente la caché local. */
+  cacheSnapshot(s);
+  tasks.forEach(ensureV8Task);migrateProjectStructures();generateRecurringOccurrences();
+  renderAll();icons();refreshVisibleSurface()
+}
+async function hydrateForSession(session){
+  if(!session?.user)throw new Error('Sesión ausente');
+  setSessionState('Cargando nube…');
+  const db=await fetchAll(), state=db.planint_user_state||[];
+  if(!state.length)throw new Error('El usuario no tiene estado PlanINT inicializado');
+  const snapshot=buildSnapshot(db);
+  if(!snapshot.projects.length)throw new Error('No se recibieron orígenes desde Supabase');
+  applySnapshot(snapshot);hydrated=true;hideGate();setGateBusy(false);
+  setSessionState('Sincronizado · lectura','online');
+}
+async function logout(){
+  const {error}=await client.auth.signOut();if(error){console.error('PLANINT_CLOUD_LOGOUT',error);return}
+  hydrated=false;showGate('Sesión cerrada. La caché local se conserva.');setSessionState('Sesión cerrada')
+}
+async function init(){
+  cloudGate();sessionIndicator();
+  if(!window.supabase?.createClient){showGate('No fue posible cargar el cliente de Supabase. Verifica la conexión a internet.','error');setSessionState('Supabase no disponible','error');return}
+  client=window.supabase.createClient(CONFIG.url,CONFIG.publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+  const {data,error}=await client.auth.getSession();
+  if(error){showGate('No fue posible validar la sesión.','error');setSessionState('Error de sesión','error');return}
+  if(data.session){setGateStatus('Recuperando información…');try{await hydrateForSession(data.session)}catch(err){console.error('PLANINT_CLOUD_INIT',err);showGate('La sesión existe, pero la información no pudo cargarse. La nube no fue modificada.','error');setSessionState('Error de carga','error')}}else showGate();
+  client.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_OUT'){hydrated=false;showGate('Sesión cerrada. La caché local se conserva.');setSessionState('Sesión cerrada')}});
+}
+window.PlanINTCloud={logout:logout,isHydrated:()=>hydrated,mode:'read-only',version:'11.8.28'};
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+})();
+</script>
+
+
+<!-- V11.8.28 · Supabase read-only hydration; localStorage remains cache/local write path. -->
 <!-- V11.8.3
 REQ-HAB-SCOPE-01 editingHabitId tiene una única fuente de verdad accesible al motor global y a la IIFE visual.
 REQ-HAB-SCOPE-02 openHabitTracking se define dentro de la IIFE que contiene openHabitModal.
