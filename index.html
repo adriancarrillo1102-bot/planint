@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>PlanINT · V11.8.29</title>
+<title>PlanINT · V11.8.30</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -4255,7 +4255,7 @@ svg[data-local-icon]{
 .planint-cloud-brand{display:flex;align-items:center;gap:12px;margin-bottom:18px}
 .planint-cloud-mark{width:42px;height:42px;border-radius:13px;background:#eef3f8;color:var(--blue2);display:grid;place-items:center;font-weight:700}
 .planint-cloud-card h2{font-size:18px;margin:0}.planint-cloud-card p{font-size:11px;color:var(--muted);margin:5px 0 0;line-height:1.5}
-.planint-cloud-form{display:grid;gap:12px;margin-top:18px}.planint-cloud-field{display:grid;gap:6px}
+.planint-cloud-form{display:grid;gap:12px;margin-top:18px}.planint-cloud-form[hidden]{display:none!important}.planint-cloud-field{display:grid;gap:6px}
 .planint-cloud-field label{font-size:10px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.5px}
 .planint-cloud-field input{width:100%;border:1px solid var(--line);border-radius:11px;padding:11px 12px;outline:0;background:#fff;color:var(--text)}
 .planint-cloud-field input:focus{border-color:#7f9fc4;box-shadow:0 0 0 3px #edf3f9}
@@ -7660,13 +7660,13 @@ async function init(){
     else if(event==='SIGNED_OUT'){hydrated=false;showGate('Sesión cerrada. La caché local se conserva.');showLogin();setSessionState('Sesión cerrada')}
   });
 }
-window.PlanINTCloud={logout:logout,isHydrated:()=>hydrated,mode:'read-only',version:'11.8.29'};
+window.PlanINTCloud={logout:logout,isHydrated:()=>hydrated,mode:'read-only',version:'11.8.30'};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
 </script>
 
 
-<!-- V11.8.29 · Password recovery via Supabase Auth; cloud data remains read-only. -->
+<!-- V11.8.30 · Auth views are mutually exclusive; password recovery via Supabase Auth; cloud data remains read-only. -->
 <!-- V11.8.3
 REQ-HAB-SCOPE-01 editingHabitId tiene una única fuente de verdad accesible al motor global y a la IIFE visual.
 REQ-HAB-SCOPE-02 openHabitTracking se define dentro de la IIFE que contiene openHabitModal.
