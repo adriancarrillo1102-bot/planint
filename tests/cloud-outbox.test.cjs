@@ -12,6 +12,7 @@ function harness(rpc){
    habits:[],reminders:[],importantDates:[],importLogs:[],workSchedule:null,personalSchedule:null,weekBaselines:{},
    setTimeout:()=>1,clearTimeout:()=>{},setInterval:()=>{},
    localStorage:{getItem:k=>memory.get(k)||null,setItem:(k,v)=>memory.set(k,v),removeItem:k=>memory.delete(k)},
+   sessionStorage:{getItem(){return null},setItem(){}},
    document:{hidden:false,addEventListener(){},querySelector(){return null},getElementById(){return null}},setSessionState:(text)=>states.push(text)};
  context.window={PlanINTRepository:api,addEventListener(){}};
  vm.createContext(context);vm.runInContext(code,context);
@@ -36,4 +37,9 @@ test('A no-op save never leaves a resolved promise blocking later saves',async()
  h.run('queueSave()');await h.run('flush()');
  h.run('queueSave()');await h.run('flush()');assert.equal(h.run('saving'),null);
  h.context.projects[0].name='Segundo cambio';h.run('queueSave()');await h.run('flush()');assert.equal(calls,2);
+});
+test('Two tabs for the same account have separate persistent queues',()=>{
+ const a=harness(async()=>{}),b=harness(async()=>{});
+ a.run('queueSave()');b.run('queueSave()');
+ assert.notEqual([...a.memory.keys()][0],[...b.memory.keys()][0]);
 });
