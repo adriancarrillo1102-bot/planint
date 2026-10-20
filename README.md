@@ -18,7 +18,7 @@ La configuración del cliente contiene solamente URL y clave pública. Las tabla
 
 Solo se envían registros nuevos, modificados o eliminados por el cliente. Se compara cada registro con su versión leída; un conflicto conserva los cambios locales y ofrece reintentar, descargar una copia o cargar la nube. Los reintentos idénticos no duplican registros. Un error revierte el lote completo.
 
-Los cambios pendientes se conservan en `localStorage` bajo una clave de su cuenta y se reintentan al recuperar conexión o volver a la pestaña. El indicador solo dice **Guardado en la nube** después de recibir confirmación. El cierre de sesión espera el guardado; salir con cambios pendientes muestra un aviso del navegador. No se garantiza una escritura antes de que el servidor la confirme.
+Los cambios pendientes se conservan en `localStorage` bajo una clave por cuenta y pestaña, cuya identidad se conserva en `sessionStorage` al recargar. Otra pestaña no puede confirmar ni borrar esa cola. Se reintentan al recuperar conexión o volver a la misma pestaña. El indicador solo dice **Guardado en la nube** después de recibir confirmación. El cierre de sesión espera el guardado; salir con cambios pendientes muestra un aviso del navegador. Conviene guardar o descargar la copia antes de cerrar una pestaña con pendientes; una pestaña nueva tiene otra cola. No se garantiza una escritura antes de que el servidor la confirme.
 
 Una sesión actualiza sus datos al volver a primer plano y cada 30 segundos, sin reemplazar cambios pendientes ni un modal abierto. Para ver cambios en otro dispositivo se debe usar la misma cuenta y la misma dirección. Las pestañas de versiones anteriores deben recargarse tras el despliegue.
 

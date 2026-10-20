@@ -7504,7 +7504,10 @@ const TABLES=[
 let client=null, hydrated=false, recoveryIntent=(location.hash.includes('type=recovery')||location.search.includes('type=recovery'));
 const repository=new window.PlanINTRepository.Repository();
 let currentUserId=null, syncTimer=null, saving=null, applying=false, refreshing=false, syncError=null;
-const outboxKey=()=> 'planint_pending_v1_'+currentUserId;
+// Each tab owns its queue; another tab must never acknowledge its pending edits.
+const writerId=sessionStorage.getItem('planint_writer_v1')||crypto.randomUUID();
+sessionStorage.setItem('planint_writer_v1',writerId);
+const outboxKey=()=> 'planint_pending_v1_'+currentUserId+'_'+writerId;
 function coreSnapshot(){return JSON.parse(JSON.stringify({tasks,projects,importantDates,importLogs,projectStructures,managementStructures,workSchedule,personalSchedule,habits,reminders,weekBaselines}))}
 function hasPending(){return !!currentUserId&&!!localStorage.getItem(outboxKey())}
 function queueSave(){
