@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>PlanINT · V11.8.32</title>
+<title>PlanINT · V11.8.33</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -5828,6 +5828,7 @@ function save(){
   localStorage.setItem('mp2_personal_schedule',JSON.stringify(personalSchedule));
   localStorage.setItem('mp2_habits',JSON.stringify(habits));
   localStorage.setItem('mp2_reminders',JSON.stringify(reminders));
+  window.PlanINTCloud?.queueSave?.();
 }
 function originById(id){return projects.find(o=>String(o.id)===String(id))||null}
 function originForTask(t){return originById(t.originId)||projects.find(o=>o.name===t.project&&o.scope===t.scope)||projects.find(o=>o.type==='other'&&o.scope===t.scope)||null}
@@ -6363,7 +6364,7 @@ window.addEventListener('resize',()=>{if(calendarMode==='month')renderCalendar()
    ========================================================== */
 let weekBaselines=JSON.parse(localStorage.getItem('mp2_week_baselines')||'{}');
 let trackingMode='today',trackingWeekOffset=0,projectDetailTab='summary';
-function saveBaselines(){localStorage.setItem('mp2_week_baselines',JSON.stringify(weekBaselines))}
+function saveBaselines(){localStorage.setItem('mp2_week_baselines',JSON.stringify(weekBaselines));window.PlanINTCloud?.queueSave?.()}
 function weekKey(start){return isoDate(start)}
 function baselineForWeek(start){return weekBaselines[weekKey(start)]||null}
 function captureWeeklyBaseline(start){let end=new Date(start);end.setDate(start.getDate()+6);let s=isoDate(start),e=isoDate(end),items=[];tasks.filter(t=>!t.isRecurringMaster&&t.intake!=='unplanned').forEach(t=>(t.scheduleHistory||[]).filter(x=>x.date>=s&&x.date<=e&&x.result==='active').forEach(x=>items.push({taskId:t.id,scheduleId:x.id,date:x.date,start:x.start||'',duration:(parseDuration(x.duration||'')?x.duration:(parseDuration(t.time||'')?t.time:'—')),originId:t.originId,name:t.name,capturedAt:new Date().toISOString()})));weekBaselines[weekKey(start)]={id:uid(),start:s,end:e,confirmedAt:new Date().toISOString(),items};saveBaselines();return weekBaselines[weekKey(start)]}
@@ -7476,11 +7477,12 @@ icons();
 
 
 
+<script src="src/data/cloud-repository.js"></script>
 <script>
-/* V11.8.28
+/* V11.8.33
 REQ-CLOUD-01 Autenticación Supabase con publishable key; sin secretos privilegiados.
 REQ-CLOUD-02 Supabase es fuente de hidratación al autenticar; localStorage queda como caché local.
-REQ-CLOUD-03 La hidratación es read-only: V11.8.28 no escribe tablas cloud.
+REQ-CLOUD-03 La hidratación no guarda; save() entrega los cambios al repository transaccional.
 REQ-CLOUD-04 El bootstrap local existente termina antes de aplicar snapshot cloud.
 REQ-CLOUD-05 Error de red/autenticación no borra ni sobreescribe datos cloud.
 REQ-CLOUD-06 Reconstruir relaciones por IDs cliente: origen/hito/entregable/categoría/checklist/programación.
@@ -7500,6 +7502,79 @@ const TABLES=[
  'planint_week_baselines','planint_week_baseline_items','planint_import_logs'
 ];
 let client=null, hydrated=false, recoveryIntent=(location.hash.includes('type=recovery')||location.search.includes('type=recovery'));
+const repository=new window.PlanINTRepository.Repository();
+let currentUserId=null, syncTimer=null, saving=null, applying=false, refreshing=false, syncError=null;
+const outboxKey=()=> 'planint_pending_v1_'+currentUserId;
+function coreSnapshot(){return JSON.parse(JSON.stringify({tasks,projects,importantDates,importLogs,projectStructures,managementStructures,workSchedule,personalSchedule,habits,reminders,weekBaselines}))}
+function hasPending(){return !!currentUserId&&!!localStorage.getItem(outboxKey())}
+function queueSave(){
+  if(!hydrated||applying||!currentUserId)return;
+  localStorage.setItem(outboxKey(),JSON.stringify({snapshot:coreSnapshot(),base:repository.db}));
+  setSessionState('Cambios pendientes de guardar');
+  clearTimeout(syncTimer);syncTimer=setTimeout(()=>flush().catch(()=>{}),350);
+}
+async function flush(){
+  clearTimeout(syncTimer);
+  if(saving)return saving;
+  if(!hydrated||!hasPending())return;
+  saving=Promise.resolve().then(async()=>{
+    try{
+      while(hasPending()){
+        const snapshot=coreSnapshot(), signature=JSON.stringify(snapshot);
+        const rows=repository.normalize(snapshot,currentUserId), changes=repository.diff(rows);
+        if(changes.length){
+          setSessionState('Guardando en la nube…');
+          const {data,error}=await client.rpc('planint_commit_changes',{changes});
+          if(error)throw error;
+          repository.committed(data);
+        }
+        // A subsequent click may have changed the Core during this request.
+        if(signature===JSON.stringify(coreSnapshot()))localStorage.removeItem(outboxKey());
+        else localStorage.setItem(outboxKey(),JSON.stringify({snapshot:coreSnapshot(),base:repository.db}));
+      }
+      syncError=null;document.getElementById('planintSyncNotice')?.remove();setSessionState('Guardado en la nube','online');
+    }catch(err){
+      syncError=err;
+      const conflict=err.code==='40001';
+      setSessionState(conflict?'Conflicto entre dispositivos · cambios conservados':'Sin guardar en la nube · reintentar','error');
+      showSyncNotice(conflict?'Este registro cambió en otro dispositivo. Tus cambios siguen en este navegador; descarga una copia antes de cargar la nube.':'No se pudo guardar en la nube. Tus cambios siguen pendientes en este navegador.');
+      throw err;
+    }finally{saving=null}
+  });
+  return saving;
+}
+function showSyncNotice(message){
+  let notice=document.getElementById('planintSyncNotice');
+  if(!notice){
+    notice=document.createElement('div');notice.id='planintSyncNotice';notice.className='notice';
+    notice.style.cssText='position:fixed;bottom:80px;left:12px;right:12px;z-index:9999;max-width:650px;margin:auto';
+    const text=document.createElement('p');text.id='planintSyncNoticeText';notice.append(text);
+    for(const [label,action] of [
+      ['Reintentar',()=>flush().then(()=>notice.remove()).catch(()=>{})],
+      ['Descargar copia',()=>{const blob=new Blob([localStorage.getItem(outboxKey())||'{}'],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='PlanINT-cambios-pendientes.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}],
+      ['Cargar nube',async()=>{if(!confirm('Se descartarán los cambios pendientes de este navegador. Descarga una copia si necesitas conservarlos. ¿Cargar la versión de la nube?'))return;localStorage.removeItem(outboxKey());syncError=null;notice.remove();await refreshCloud()}]
+    ]){const b=document.createElement('button');b.type='button';b.className='btn';b.textContent=label;b.addEventListener('click',action);notice.append(b)}
+    document.body.append(notice);
+  }
+  document.getElementById('planintSyncNoticeText').textContent=message;
+}
+async function refreshCloud(){
+  if(!hydrated||saving||refreshing||hasPending()||document.hidden||document.querySelector('.modal-backdrop.show'))return;
+  refreshing=true;
+  try{
+    const {data,error}=await client.auth.getSession();if(error)throw error;
+    if(data.session?.user?.id!==currentUserId)return;
+    const db=await fetchAll();
+    if(hasPending()||saving)return;
+    repository.accept(db);applySnapshot(buildSnapshot(db));
+    setSessionState('Guardado en la nube','online');
+  }catch(err){setSessionState('No se pudo actualizar la nube','error')}
+  finally{refreshing=false}
+}
+window.addEventListener('online',()=>flush().then(refreshCloud).catch(()=>{}));
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)flush().then(refreshCloud).catch(()=>{})});
+window.addEventListener('beforeunload',event=>{if(hasPending()){event.preventDefault();event.returnValue=''}});
+setInterval(()=>{if(!document.hidden)refreshCloud()},30000);
 
 function timeHM(v){return v?String(v).slice(0,5):''}
 function isoOrNull(v){return v||null}
@@ -7597,9 +7672,13 @@ async function signIn(ev){
 }
 async function fetchAll(){
   const pairs=await Promise.all(TABLES.map(async table=>{
-    const {data,error}=await client.from(table).select('*');
-    if(error)throw new Error(table+': '+error.message);
-    return [table,data||[]]
+    const rows=[];
+    for(let offset=0;;offset+=1000){
+      const {data,error}=await client.from(table).select('*').order(table==='planint_user_state'?'user_id':'id').range(offset,offset+999);
+      if(error)throw new Error(table+': '+error.message);
+      rows.push(...(data||[]));if((data||[]).length<1000)break;
+    }
+    return [table,rows]
   }));
   return Object.fromEntries(pairs)
 }
@@ -7676,6 +7755,8 @@ function cacheSnapshot(s){
   localStorage.setItem('mp2_cloud_cache_meta',JSON.stringify({version:'11.8.28',hydratedAt:new Date().toISOString()}))
 }
 function applySnapshot(s){
+  applying=true;
+  try{
   tasks=s.tasks;projects=s.projects;importantDates=s.importantDates;importLogs=s.importLogs;
   projectStructures=s.projectStructures;managementStructures=s.managementStructures;
   if(s.workSchedule)workSchedule=s.workSchedule;if(s.personalSchedule)personalSchedule=s.personalSchedule;
@@ -7685,6 +7766,7 @@ function applySnapshot(s){
   cacheSnapshot(s);
   tasks.forEach(ensureV8Task);migrateProjectStructures();generateRecurringOccurrences();
   renderAll();icons();refreshVisibleSurface()
+  }finally{applying=false}
 }
 async function hydrateForSession(session){
   if(!session?.user)throw new Error('Sesión ausente');
@@ -7693,8 +7775,12 @@ async function hydrateForSession(session){
   if(!state.length)throw new Error('El usuario no tiene estado PlanINT inicializado');
   const snapshot=buildSnapshot(db);
   if(!snapshot.projects.length)throw new Error('No se recibieron orígenes desde Supabase');
-  applySnapshot(snapshot);hydrated=true;hideGate();setGateBusy(false);
-  setSessionState('Sincronizado · lectura/borrado','online');
+  currentUserId=session.user.id;
+  const pending=JSON.parse(localStorage.getItem(outboxKey())||'null');
+  repository.accept(pending?.base||db);
+  applySnapshot(pending?.snapshot||snapshot);hydrated=true;hideGate();setGateBusy(false);
+  setSessionState('Guardado en la nube','online');
+  if(pending)queueSave();
 }
 
 function authUserLabel(user){
@@ -7716,10 +7802,12 @@ async function currentSessionUser(){
   return data.session.user
 }
 async function cloudDeleteByClient(table,clientId){
+  await flush();
   const {error}=await client.from(table).delete().eq('client_id',clientId);
   if(error)throw error;
 }
 async function cloudDeleteActivityTree(clientId){
+  await flush();
   const {data:root,error:e0}=await client.from('planint_activities').select('id,client_id,recurrence_master_id').eq('client_id',clientId).maybeSingle();
   if(e0)throw e0;if(!root)return;
   const {data:children,error:e1}=await client.from('planint_activities').select('id,client_id').eq('recurrence_master_id',root.id);
@@ -7737,6 +7825,7 @@ async function cloudDeleteActivityTree(clientId){
   const q=await client.from('planint_activities').delete().eq('id',root.id);if(q.error)throw q.error;
 }
 async function cloudResetPlanINT(){
+  await flush();
   const order=['planint_week_baseline_items','planint_week_baselines','planint_schedule_history','planint_checklist_items','planint_habit_tracking','planint_reminders','planint_habits','planint_important_dates','planint_activities','planint_deliverables','planint_milestones','planint_management_categories','planint_import_logs','planint_availability_days','planint_availability_profiles','planint_origins'];
   for(const table of order){
     const {error}=await client.from(table).delete().not('user_id','is',null);
@@ -7809,6 +7898,7 @@ async function deleteReminderCloudAware(){
 }
 
 async function logout(){
+  try{await flush()}catch(err){alert('Hay cambios pendientes de guardar. Reintenta la sincronización antes de cerrar sesión.');return}
   const {error}=await client.auth.signOut();if(error){console.error('PLANINT_CLOUD_LOGOUT',error);return}
   hydrated=false;showGate('Sesión cerrada. La caché local se conserva.');setSessionState('Sesión cerrada')
 }
@@ -7849,18 +7939,18 @@ function bindAccountUI(){
 }
 
 bindAccountUI();
-window.PlanINTCloud={logout:logout,isHydrated:()=>hydrated,mode:'read-delete',version:'11.8.32',deleteImportant:deleteImportantCloudAware,deleteHabit:deleteHabitCloudAware,deleteReminder:deleteReminderCloudAware,deleteActivity:deleteActivityRecord,reset:resetPlanINT,saveProfile:saveProfileName};
+window.PlanINTCloud={logout:logout,isHydrated:()=>hydrated,mode:'read-write',version:'11.8.33',queueSave,flush,refresh:refreshCloud,deleteImportant:deleteImportantCloudAware,deleteHabit:deleteHabitCloudAware,deleteReminder:deleteReminderCloudAware,deleteActivity:deleteActivityRecord,reset:resetPlanINT,saveProfile:saveProfileName};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
 </script>
 
 
-<!-- V11.8.32 · Account identity/logout + governed Supabase deletions/reset.
+<!-- V11.8.33 · Account identity/logout + transactional persistence.
 REQ-ACC-01 visible authenticated identity and logout.
 REQ-DATA-01 activity/important/habit/reminder delete operates against Supabase then rehydrates.
 REQ-DATA-02 reset deletes only authenticated user's rows under RLS, preserves auth account and recreates system "Otro" origins.
 REQ-DATA-03 destructive reset requires two-step confirmation.
-Cloud create/edit remains local-first and is NOT declared synchronized in this increment. -->
+Create/edit uses a persistent per-account outbox and optimistic transactional patches. -->
 <!-- V11.8.3
 REQ-HAB-SCOPE-01 editingHabitId tiene una única fuente de verdad accesible al motor global y a la IIFE visual.
 REQ-HAB-SCOPE-02 openHabitTracking se define dentro de la IIFE que contiene openHabitModal.
@@ -8102,3 +8192,4 @@ REQ-HAB-QUICK-05: Semana conserva funciones de capacidad/línea base y agrega se
 </html>
 
 <!-- V11.8.5 · Mes enfocado en fechas importantes, incidencias y carga; leyenda semanal de hábitos en una sola línea. -->
+
