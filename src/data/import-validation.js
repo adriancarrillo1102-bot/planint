@@ -15,15 +15,11 @@
     if(y<1900||y>9999||check.getFullYear()!==+y||check.getMonth()+1!==+m||check.getDate()!==+d)throw new Error('Fecha compromiso inválida.');
     return String(y).padStart(4,'0')+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');
   }
-  function urgency(value,policy='strict'){
-    const s=fold(value);if(!s)return 'Normal';
-    const values={normal:'Normal',urgente:'Urgente',critica:'Crítica'};
+  function urgency(value){
+    const s=fold(value);if(!s)return 'Media';
+    const values={baja:'Baja',media:'Media',alta:'Alta',critica:'Crítica',normal:'Media',urgente:'Alta'};
     if(values[s])return values[s];
-    if(['alta','media','baja'].includes(s)){
-      if(policy==='high-urgent')return s==='alta'?'Urgente':'Normal';
-      if(policy==='high-critical')return {alta:'Crítica',media:'Urgente',baja:'Normal'}[s];
-    }
-    throw new Error('Urgencia inválida: usa Normal, Urgente o Crítica, o selecciona una equivalencia.');
+    throw new Error('Urgencia inválida: usa Baja, Media, Alta o Crítica.');
   }
   function priority(value){const s=fold(value)||'media',values={alta:'Alta',media:'Media',baja:'Baja'};if(!values[s])throw new Error('Prioridad inválida: usa Alta, Media o Baja.');return values[s]}
   const api={date,urgency,priority,fold};

@@ -64,7 +64,7 @@
         milestone_id:milestones.get(key(t.originId,t.milestoneId))||null,
         deliverable_id:deliverables.get(key(t.originId,t.milestoneId,t.deliverableId))||null,
         management_category_id:categories.get(key(t.originId,t.managementCategoryId))||null,
-        status:t.status,priority:t.priority||'Media',urgency:t.urgency||'Normal',estimated_duration_raw:t.time||'—',
+        status:t.status,priority:t.priority||'Media',urgency:t.urgency||'Media',estimated_duration_raw:t.time||'—',
         nature:t.nature||'unique',intake:t.intake||'planned',tentative_date:nil(t.tentativeDate),description:t.description||'',notes:t.notes||'',
         phase:t.phase||'',category:t.category||'',dependency:t.dependency||'',
         responsibility_role:t.responsibilityRole||'executor',checklist_enabled:!!t.checklistEnabled,

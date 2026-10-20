@@ -28,7 +28,7 @@ En Importaciones, elegir la carga general para respetar Ámbito, Tipo Origen y O
 
 Para actividades nuevas, dejar ID Actividad vacío. Para actualizar, usar el ID obtenido al exportar desde PlanINT. Una segunda carga del archivo original sin IDs se detecta como posible duplicado y no genera copias. Las filas repetidas dentro del mismo archivo también se detectan.
 
-Usar prioridades Alta/Media/Baja y urgencias Normal/Urgente/Crítica. Si el archivo trae urgencias Alta/Media/Baja, elegir explícitamente la equivalencia en el formulario; sin equivalencia quedan como conflictos. Las fechas pueden ser celdas de fecha Excel, AAAA-MM-DD o DD/MM/AAAA. No se desplazan fechas vencidas ni se programan automáticamente las actividades. Fase, Categoría y Dependencia se conservan como texto, sin crear hitos ni relaciones adicionales.
+Usar prioridades Alta/Media/Baja y urgencias Baja/Media/Alta/Crítica. La urgencia predeterminada es Media. Por compatibilidad, Normal se convierte a Media y Urgente a Alta. Las fechas pueden ser celdas de fecha Excel, AAAA-MM-DD o DD/MM/AAAA. No se desplazan fechas vencidas ni se programan automáticamente las actividades. Fase, Categoría y Dependencia se conservan como texto, sin crear hitos ni relaciones adicionales.
 
 Revisar la vista previa antes de confirmar. El mensaje de éxito solo aparece después de que Supabase confirma el guardado. Si la conexión falla, reintentar la sincronización desde el aviso de pendientes, sin repetir la carga.
 

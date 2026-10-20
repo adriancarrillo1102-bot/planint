@@ -12,13 +12,13 @@ test('Excel dates and calendar text preserve the intended date; invalid dates ar
  assert.throws(()=>validation.date('11-07-26'));
  assert.throws(()=>validation.date(new Date(NaN)));
 });
-test('Urgency requires an explicit policy for legacy values',()=>{
- assert.throws(()=>validation.urgency('Alta'));
- assert.equal(validation.urgency('Alta','high-urgent'),'Urgente');
- assert.equal(validation.urgency('Media','high-urgent'),'Normal');
- assert.equal(validation.urgency('Baja','high-urgent'),'Normal');
- assert.equal(validation.urgency('Alta','high-critical'),'Crítica');
- assert.equal(validation.urgency('Media','high-critical'),'Urgente');
+test('Urgency uses four standard levels and retains compatibility with earlier versions',()=>{
+ assert.equal(validation.urgency('Alta'),'Alta');
+ assert.equal(validation.urgency('Media'),'Media');
+ assert.equal(validation.urgency('Baja'),'Baja');
+ assert.equal(validation.urgency('Normal'),'Media');
+ assert.equal(validation.urgency('Urgente'),'Alta');
+ assert.equal(validation.urgency(''),'Media');
  assert.equal(validation.urgency('Crítica'),'Crítica');
  assert.throws(()=>validation.priority('Inmediata'));
 });
@@ -34,7 +34,7 @@ const row=()=>({'Ámbito':'Personal','Tipo Origen':'Proyecto','Origen':'QA','Act
 test('Bulk preview rejects in-file duplicates and missing or invalid fields',()=>{
  const h=harness();h.analyzeRows([row(),row(),{...row(),Actividad:'Otra','Fecha compromiso':'2026-02-30'}, {...row(),Actividad:''}],'qa.xlsx');
  assert.deepEqual(Array.from(h.importAnalysis.results,r=>r.type),['new','conflict','conflict','conflict']);
- assert.equal(h.importAnalysis.results[0].data.urgency,'Urgente');
+ assert.equal(h.importAnalysis.results[0].data.urgency,'Alta');
  assert.equal(h.importAnalysis.results[0].data.phase,'Diseño');
 });
 test('The same workbook after creation is flagged as a duplicate instead of creating twice',()=>{
