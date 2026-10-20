@@ -1,6 +1,6 @@
 # PlanINT
 
-Planeador personal y laboral. La versión 11.8.33 conserva la interfaz y el Core de 11.8.32 y completa el guardado remoto.
+Planeador personal y laboral. La versión 11.8.34 conserva la interfaz y el Core vigente y añade validación de importación masiva al guardado remoto.
 
 ## Publicación y acceso
 
@@ -22,7 +22,17 @@ Los cambios pendientes se conservan en `localStorage` bajo una clave por cuenta 
 
 Una sesión actualiza sus datos al volver a primer plano y cada 30 segundos, sin reemplazar cambios pendientes ni un modal abierto. Para ver cambios en otro dispositivo se debe usar la misma cuenta y la misma dirección. Las pestañas de versiones anteriores deben recargarse tras el despliegue.
 
-## Verificación
+## Importación de actividades
+
+En Importaciones, elegir la carga general para respetar Ámbito, Tipo Origen y Origen de cada fila. La primera hoja es la fuente de actividades; la hoja Origenes de la plantilla es una referencia. Los orígenes faltantes se crean al confirmar.
+
+Para actividades nuevas, dejar ID Actividad vacío. Para actualizar, usar el ID obtenido al exportar desde PlanINT. Una segunda carga del archivo original sin IDs se detecta como posible duplicado y no genera copias. Las filas repetidas dentro del mismo archivo también se detectan.
+
+Usar prioridades Alta/Media/Baja y urgencias Baja/Media/Alta/Crítica. La urgencia predeterminada es Media. Por compatibilidad, Normal se convierte a Media y Urgente a Alta. Las fechas pueden ser celdas de fecha Excel, AAAA-MM-DD o DD/MM/AAAA. No se desplazan fechas vencidas ni se programan automáticamente las actividades. Fase, Categoría y Dependencia se conservan como texto, sin crear hitos ni relaciones adicionales.
+
+Revisar la vista previa antes de confirmar. El mensaje de éxito solo aparece después de que Supabase confirma el guardado. Si la conexión falla, reintentar la sincronización desde el aviso de pendientes, sin repetir la carga.
+
+## Pruebas
 
 Ejecutar con Node.js:
 
