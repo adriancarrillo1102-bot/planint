@@ -12,12 +12,12 @@ function fixture(){return {
  managementStructures:{2:{categories:[{id:'c1',name:'Categoría'}]}},
  tasks:[{id:10,name:'Actividad',scope:'personal',originId:1,milestoneId:'m1',deliverableId:'d1',status:'scheduled',phase:'Diseño',category:'QA',dependency:'Referencia anterior',
    checklistEnabled:true,checklist:[{id:11,text:'Paso',done:true}],scheduleHistory:[{id:12,date:'2026-10-21',start:'10:00',duration:'1 h',result:'active'}]},
-   {id:20,name:'Maestro',scope:'work',originId:2,managementCategoryId:'c1',status:'recurring',isRecurringMaster:true,recurrence:{freq:'weekly',days:[1],time:'08:00',start:'2026-10-20'}},
+   {id:20,name:'Maestro',scope:'work',originId:2,managementCategoryId:'c1',status:'recurring',isRecurringMaster:true,recurrence:{freq:'weekly',days:[1],time:'08:00',start:'2026-10-20',excludedDates:['2026-10-27'],stopFrom:'2026-11-01'}},
    {id:21,name:'Instancia',scope:'work',originId:2,status:'pending',recurrenceMasterId:20,recurrenceDate:'2026-10-21'}],
  importantDates:[{id:30,name:'Fecha',scope:'personal',date:'2026-10-21'}],
  habits:[{id:40,name:'Hábito',scope:'personal',targetDays:[1,3],active:false,tracking:{'2026-10-20':'done','2026-10-21':'skipped'}}],
  reminders:[{id:50,title:'Recordatorio',scope:'work',date:'2026-10-21',time:'09:00'}],
- workSchedule:{version:1,breakMinutes:0,days:[{day:0,name:'Lunes',active:true,start:'08:00',end:'17:00'}]},personalSchedule:null,
+ workSchedule:{version:1,breakMinutes:0,timeBlocks:[{id:'qa-block',title:'Comida',startDate:'2026-10-20',endDate:'',startTime:'13:00',endTime:'14:00',freq:'daily',days:[],allDay:false,replacesBreak:true,excludedDates:['2026-10-27']}],days:[{day:0,name:'Lunes',active:true,start:'08:00',end:'17:00'}]},personalSchedule:null,
  weekBaselines:{'2026-10-19':{id:60,start:'2026-10-19',end:'2026-10-25',confirmedAt:'2026-10-20T10:00:00Z',items:[{taskId:10,scheduleId:12,originId:1,date:'2026-10-21',start:'10:00',name:'Actividad',capturedAt:'2026-10-20T10:00:00Z'}]}},
  importLogs:[{name:'importación',count:3}]
 }}
@@ -65,6 +65,10 @@ test('Existing UI hydration round-trips relations, recurrence, tracking, and sch
  assert.equal(s.tasks.find(t=>t.id===10).category,'QA');
  assert.equal(s.tasks.find(t=>t.id===10).dependency,'Referencia anterior');
  assert.equal(s.tasks.find(t=>t.id===21).recurrenceMasterId,20);
+ assert.equal(s.tasks.find(t=>t.id===20).recurrence.excludedDates[0],'2026-10-27');
+ assert.equal(s.tasks.find(t=>t.id===20).recurrence.stopFrom,'2026-11-01');
+ assert.equal(s.workSchedule.timeBlocks[0].id,'qa-block');
+ assert.equal(s.workSchedule.timeBlocks[0].excludedDates[0],'2026-10-27');
  assert.equal(s.habits[0].active,false);assert.equal(s.habits[0].tracking['2026-10-21'],'skipped');
  assert.equal(s.weekBaselines['2026-10-19'].items[0].taskId,10);
 });

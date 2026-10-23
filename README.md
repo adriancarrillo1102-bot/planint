@@ -1,6 +1,6 @@
 # PlanINT
 
-Planeador personal y laboral. La versión 11.8.34 conserva la interfaz y el Core vigente y añade validación de importación masiva al guardado remoto.
+Planeador personal y laboral. La versión 11.8.35 corrige eliminación de actividades y recordatorios, conserva excepciones de recurrencia y añade bloqueos de disponibilidad para comida y feriados.
 
 ## Publicación y acceso
 
@@ -33,6 +33,22 @@ Usar prioridades Alta/Media/Baja y urgencias Baja/Media/Alta/Crítica. La urgenc
 Revisar la vista previa antes de confirmar. El mensaje de éxito solo aparece después de que Supabase confirma el guardado. Si la conexión falla, reintentar la sincronización desde el aviso de pendientes, sin repetir la carga.
 
 ## Pruebas
+
+### Bloqueos y eliminación (11.8.35)
+
+En Calendario → Bloqueos y feriados, crear un bloqueo laboral o personal, por horario o día completo. Puede ser único, diario o semanal, con fecha final opcional. También se administra desde Configuración y desde Editar disponibilidad. En Calendario se muestra en violeta; no es una actividad de Banco ni de Semana, pero sí reduce sus indicadores de disponibilidad.
+
+La opción «Este bloqueo representa la pausa de comida ya descontada» sustituye la parte correspondiente de la pausa genérica para evitar doble descuento. Los intervalos superpuestos se descuentan una sola vez y se recortan al horario base. Un feriado laboral no elimina disponibilidad personal. Los turnos y bloqueos que cruzan medianoche se calculan por fecha local. La pausa genérica antigua, que no tiene hora, sigue siendo un descuento de capacidad; los bloqueos explícitos sí impiden programar en su intervalo.
+
+Las actividades ya programadas no se mueven ni se eliminan al bloquear un horario. Se señalan sus conflictos en Calendario y Semana. Las nuevas ocurrencias automáticas sobre un bloqueo no se generan; al liberar el horario pueden volver a generarse dentro del horizonte existente.
+
+En una actividad recurrente, Eliminar permite elegir una ocurrencia o toda la serie. Una ocurrencia eliminada deja una excepción persistente. La eliminación de toda la serie incluye su historial y requiere elegir esa opción expresamente. El borrado usa el mismo lote transaccional que el guardado, con comprobación de concurrencia y referencias.
+
+En la ficha de una actividad, «Convertir en bloqueo» permite reemplazar la planificación pendiente desde una fecha. Conserva las ocurrencias realizadas y anteriores y cierra la regla original. La conversión no se ejecuta automáticamente al actualizar la aplicación. Las actividades únicas con historial previo no pueden convertirse destructivamente.
+
+Los bloqueos se guardan en `planint_availability_profiles.time_blocks`, bajo las políticas de propietario existentes; las excepciones en `planint_activities.recurrence_exclusions`. La migración es aditiva y no transforma ni elimina registros existentes. Los respaldos incluyen ambos campos. La restauración solo declara éxito tras confirmar Supabase.
+
+Para pruebas de interfaz aisladas, ejecutar `node tests/make-browser-fixture.cjs`, servir esta carpeta únicamente en localhost y abrir `/tests/browser-fixture.html`. El botón «Ejecutar controles QA» usa datos sintéticos y una frontera de nube simulada; nunca abrir el fixture como aplicación real. Los archivos de fixture generados no se incluyen en el despliegue. Las pruebas SQL `tests/blocks-database.sql` verifican la frontera real con RLS y revierten toda la transacción.
 
 Ejecutar con Node.js:
 

@@ -71,7 +71,7 @@
         closing_comments:t.closingComments||'',actual_minutes:Number(t.actualMinutes||0),actual_start:nil(t.actualStart),actual_end:nil(t.actualEnd),
         completed_date:nil(t.completedDate),completed_at:nil(t.completedAt),is_recurring_master:!!t.isRecurringMaster,
         recurrence_master_id:null,recurrence_date:nil(t.recurrenceDate),recurrence_freq:nil(t.recurrence?.freq),
-        recurrence_days:t.recurrence?.days||null,recurrence_time:nil(t.recurrence?.time),recurrence_start:nil(t.recurrence?.start),recurrence_end:nil(t.recurrence?.end),
+        recurrence_stopped_from:nil(t.recurrence?.stopFrom),recurrence_exclusions:t.recurrence?.excludedDates||[],recurrence_days:t.recurrence?.days||null,recurrence_time:nil(t.recurrence?.time),recurrence_start:nil(t.recurrence?.start),recurrence_end:nil(t.recurrence?.end),
         origin_history:t.originHistory||[],postpone_history:t.postponeHistory||[],source_created_at:nil(t.createdAt)}));
       for(const t of ordered){
         out.planint_activities.find(r=>r.id===activities.get(String(t.id))).recurrence_master_id=activities.get(String(t.recurrenceMasterId))||null;
@@ -93,7 +93,7 @@
       for(const r of s.reminders)add('reminders',{client_id:r.id,title:r.title,reminder_date:r.date,reminder_time:r.time||'00:00',scope:r.scope,note:r.note||'',
         active:r.active!==false,source_created_at:nil(r.createdAt),source_updated_at:nil(r.updatedAt)});
       for(const [scope,p] of [['work',s.workSchedule],['personal',s.personalSchedule]])if(p){
-        const id=add('availability_profiles',{scope,version:p.version||1,break_minutes:Number(p.breakMinutes||0)});
+        const id=add('availability_profiles',{scope,version:p.version||1,break_minutes:Number(p.breakMinutes||0),time_blocks:p.timeBlocks||[]});
         for(const d of p.days||[])add('availability_days',{profile_id:id,day_of_week:d.day,day_name:d.name,active:!!d.active,start_time:d.start||'00:00',end_time:d.end||'00:00'});
       }
       for(const b of Object.values(s.weekBaselines)){
