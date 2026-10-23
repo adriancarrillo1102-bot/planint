@@ -68,7 +68,7 @@
         nature:t.nature||'unique',intake:t.intake||'planned',tentative_date:nil(t.tentativeDate),description:t.description||'',notes:t.notes||'',
         phase:t.phase||'',category:t.category||'',dependency:t.dependency||'',
         responsibility_role:t.responsibilityRole||'executor',checklist_enabled:!!t.checklistEnabled,
-        closing_comments:t.closingComments||'',actual_minutes:Number(t.actualMinutes||0),actual_start:nil(t.actualStart),actual_end:nil(t.actualEnd),
+        completion_history:t.completionHistory||[],closing_comments:t.closingComments||'',actual_minutes:Number(t.actualMinutes||0),actual_start:nil(t.actualStart),actual_end:nil(t.actualEnd),
         completed_date:nil(t.completedDate),completed_at:nil(t.completedAt),is_recurring_master:!!t.isRecurringMaster,
         recurrence_master_id:null,recurrence_date:nil(t.recurrenceDate),recurrence_freq:nil(t.recurrence?.freq),
         recurrence_stopped_from:nil(t.recurrence?.stopFrom),recurrence_exclusions:t.recurrence?.excludedDates||[],recurrence_days:t.recurrence?.days||null,recurrence_time:nil(t.recurrence?.time),recurrence_start:nil(t.recurrence?.start),recurrence_end:nil(t.recurrence?.end),

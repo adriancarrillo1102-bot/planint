@@ -11,7 +11,7 @@ function fixture(){return {
  projectStructures:{1:{milestones:[{id:'m1',name:'Hito',deliverables:[{id:'d1',name:'Entregable'}]}]}},
  managementStructures:{2:{categories:[{id:'c1',name:'Categoría'}]}},
  tasks:[{id:10,name:'Actividad',scope:'personal',originId:1,milestoneId:'m1',deliverableId:'d1',status:'scheduled',phase:'Diseño',category:'QA',dependency:'Referencia anterior',
-   checklistEnabled:true,checklist:[{id:11,text:'Paso',done:true}],scheduleHistory:[{id:12,date:'2026-10-21',start:'10:00',duration:'1 h',result:'active'}]},
+   completionHistory:[{action:'correct',before:{actualStart:'09:00'},after:{actualStart:'10:00'}}],checklistEnabled:true,checklist:[{id:11,text:'Paso',done:true}],scheduleHistory:[{id:12,date:'2026-10-21',start:'10:00',duration:'1 h',result:'active'}]},
    {id:20,name:'Maestro',scope:'work',originId:2,managementCategoryId:'c1',status:'recurring',isRecurringMaster:true,recurrence:{freq:'weekly',days:[1],time:'08:00',start:'2026-10-20',excludedDates:['2026-10-27'],stopFrom:'2026-11-01'}},
    {id:21,name:'Instancia',scope:'work',originId:2,status:'pending',recurrenceMasterId:20,recurrenceDate:'2026-10-21'}],
  importantDates:[{id:30,name:'Fecha',scope:'personal',date:'2026-10-21'}],
@@ -62,6 +62,7 @@ test('Existing UI hydration round-trips relations, recurrence, tracking, and sch
  assert.equal(s.tasks.find(t=>t.id===10).checklist[0].text,'Paso');
  assert.equal(s.tasks.find(t=>t.id===10).deliverableId,'d1');
  assert.equal(s.tasks.find(t=>t.id===10).phase,'Diseño');
+ assert.equal(s.tasks.find(t=>t.id===10).completionHistory[0].before.actualStart,'09:00');
  assert.equal(s.tasks.find(t=>t.id===10).category,'QA');
  assert.equal(s.tasks.find(t=>t.id===10).dependency,'Referencia anterior');
  assert.equal(s.tasks.find(t=>t.id===21).recurrenceMasterId,20);

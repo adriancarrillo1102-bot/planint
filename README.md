@@ -67,3 +67,7 @@ Se puede revertir el commit de la interfaz a 11.8.32; la función SQL adicional 
 ## Límites de validación
 
 Las pruebas de código y base no sustituyen una prueba real en Android. La comprobación final es crear una actividad, esperar el guardado, abrirla desde otra sesión y editarla. Los permisos y el esquema preexistentes no se han rediseñado en esta corrección.
+
+
+### Corrección de actividades terminadas · V11.8.36
+En Historial, abre la actividad y elige **Corregir realización** para cambiar fecha, hora real inicial, hora real final o comentarios. Se recalcula la duración real sin alterar el horario planeado. Si el cierre fue accidental, usa **Reabrir actividad**: conserva checklist y programación y elimina el cierre de los totales realizados. Una fecha planeada pasada queda como no realizada. Los cambios afectan únicamente esa ocurrencia y conservan el cierre anterior en `completion_history`, protegido por las políticas existentes de cada cuenta. Las horas finales anteriores al inicio se interpretan como el día siguiente, igual que en el cierre original. El guardado espera confirmación de Supabase; ante un fallo se conserva el cambio pendiente y el mismo botón permite reintentar sin duplicar el historial.

@@ -37,6 +37,18 @@
       openTaskDetail(t.id);await click('activityDetailPostpone');assert(t.status==='postponed','Postponed');
       openTaskDetail(t.id);await click('activityDetailComplete');value('completionActualStart','15:00');value('completionActualEnd','16:00');await click('confirmCompletion');assert(t.status==='done'&&t.actualMinutes===60,'Completed with actual time');
     });
+    await test('Correct completed execution and reopen through the actual detail buttons',async()=>{
+      const id=tasks.find(t=>t.name==='QA editada desde controles').id;
+      openTaskDetail(id);await click('activityDetailCorrect');assert($('completionActualStart').value==='15:00','Existing start loaded');
+      value('completionActualStart','15:30');value('completionComments','Cierre corregido QA');await click('confirmCompletion');
+      let t=tasks.find(t=>t.id===id);assert(t.actualMinutes===30&&t.status==='done','Actual duration corrected');assert(t.completionHistory[0].before.actualStart==='15:00','Previous execution retained');
+      openTaskDetail(id);await click('activityDetailCorrect');value('completionActualStart','15:45');window.QAFailFlushAt=window.QAFlushCount+2;await click('confirmCompletion');
+      assert($('completionEditStatus').textContent.includes('pendiente'),'Cloud failure stays visible');window.QAFailFlushAt=0;await click('confirmCompletion');
+      t=tasks.find(t=>t.id===id);assert(t.completionHistory.length===2&&t.actualMinutes===15,'Retry does not duplicate correction');
+      openTaskDetail(id);await click('activityDetailReopen');await click('confirmReopenCompletion');
+      t=tasks.find(t=>t.id===id);assert(t.status!=='done'&&t.actualMinutes===0,'Reopened and actual total cleared');assert(t.checklist.length===2,'Checklist retained');assert(t.completionHistory[2].before.closingComments==='Cierre corregido QA','Previous comments retained');
+      openTaskDetail(id);assert($('activityDetailCorrect').style.display==='none','Correction hidden for pending task');closeModal('activityDetailModal');
+    });
     await test('Delete single activity through its real button and transaction UI',async()=>{
       const t=tasks.find(t=>t.name==='QA editada desde controles');openTaskDetail(t.id);await click('activityDetailDelete');assert($('deleteActivityModal').classList.contains('show'),'Delete opens');await click('confirmActivityDelete');assert(!tasks.some(x=>x.id===t.id),'Deleted');
     });

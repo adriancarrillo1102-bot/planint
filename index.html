@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>PlanINT · V11.8.35</title>
+<title>PlanINT · V11.8.36</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -6302,7 +6302,7 @@ const PLANINT_BACKUP_SCHEMA=1;
 let pendingBackupRestore=null;
 function backupClone(v){return JSON.parse(JSON.stringify(v))}
 function backupDataSnapshot(){return {tasks:backupClone(tasks),projects:backupClone(projects),importantDates:backupClone(importantDates),importLogs:backupClone(importLogs),projectStructures:backupClone(projectStructures),managementStructures:backupClone(managementStructures),workSchedule:backupClone(workSchedule),personalSchedule:backupClone(personalSchedule),habits:backupClone(habits),reminders:backupClone(reminders),weekBaselines:backupClone(weekBaselines)}}
-function backupPayload(){return {format:'PlanINT Backup',schemaVersion:PLANINT_BACKUP_SCHEMA,appVersion:'V11.8.35',exportedAt:new Date().toISOString(),data:backupDataSnapshot()}}
+function backupPayload(){return {format:'PlanINT Backup',schemaVersion:PLANINT_BACKUP_SCHEMA,appVersion:'V11.8.36',exportedAt:new Date().toISOString(),data:backupDataSnapshot()}}
 function backupCounts(data){return {activities:Array.isArray(data.tasks)?data.tasks.length:0,projects:Array.isArray(data.projects)?data.projects.length:0,important:Array.isArray(data.importantDates)?data.importantDates.length:0,habits:Array.isArray(data.habits)?data.habits.length:0,reminders:Array.isArray(data.reminders)?data.reminders.length:0,baselines:data.weekBaselines&&typeof data.weekBaselines==='object'?Object.keys(data.weekBaselines).length:0}}
 function backupCanonical(value){if(Array.isArray(value))return value.map(backupCanonical);if(value&&typeof value==='object'){let out={};Object.keys(value).sort().forEach(k=>{out[k]=backupCanonical(value[k])});return out}return value}
 function backupSemanticEqual(a,b){return JSON.stringify(backupCanonical(a))===JSON.stringify(backupCanonical(b))}
@@ -7750,7 +7750,7 @@ function buildSnapshot(db){
       tentativeDate:a.tentative_date||'',description:a.description||'',notes:a.notes||'',phase:a.phase||'',category:a.category||'',dependency:a.dependency||'',milestoneId:m?.client_key||'',deliverableId:d?.client_key||'',
       milestone:m?.name||'',deliverable:d?.name||'',managementCategoryId:c?.client_key||'',managementCategory:c?.name||'',
       responsibilityRole:a.responsibility_role||'executor',checklistEnabled:!!a.checklist_enabled,checklist:[],scheduleHistory:[],
-      createdAt:sourceIso(a),originHistory:a.origin_history||[],closingComments:a.closing_comments||'',actualMinutes:Number(a.actual_minutes||0),
+      createdAt:sourceIso(a),originHistory:a.origin_history||[],completionHistory:a.completion_history||[],closingComments:a.closing_comments||'',actualMinutes:Number(a.actual_minutes||0),
       actualStart:timeHM(a.actual_start),actualEnd:timeHM(a.actual_end),completedDate:a.completed_date||'',completedAt:isoOrNull(a.completed_at),
       postponeHistory:a.postpone_history||[]};
     if(a.is_recurring_master){t.isRecurringMaster=true;t.recurrence={freq:a.recurrence_freq||'weekly',days:a.recurrence_days||[],time:timeHM(a.recurrence_time)||'08:00',start:a.recurrence_start||'',end:a.recurrence_end||'',excludedDates:a.recurrence_exclusions||[],stopFrom:a.recurrence_stopped_from||''}}
@@ -7971,7 +7971,7 @@ function bindAccountUI(){
 }
 
 bindAccountUI();
-window.PlanINTCloud={logout:logout,isHydrated:()=>hydrated,mode:'read-write',version:'11.8.35',queueSave,flush,refresh:refreshCloud,deleteImportant:deleteImportantCloudAware,deleteHabit:deleteHabitCloudAware,deleteReminder:deleteReminderCloudAware,deleteActivity:deleteActivityRecord,reset:resetPlanINT,saveProfile:saveProfileName};
+window.PlanINTCloud={logout:logout,isHydrated:()=>hydrated,mode:'read-write',version:'11.8.36',queueSave,flush,refresh:refreshCloud,deleteImportant:deleteImportantCloudAware,deleteHabit:deleteHabitCloudAware,deleteReminder:deleteReminderCloudAware,deleteActivity:deleteActivityRecord,reset:resetPlanINT,saveProfile:saveProfileName};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
 </script>
@@ -8221,6 +8221,8 @@ REQ-HAB-QUICK-05: Semana conserva funciones de capacidad/línea base y agrega se
 
 
 <script src="src/ui/time-blocks.js"></script>
+<script src="src/data/completion-actions.js"></script>
+<script src="src/ui/completion-editor.js"></script>
 </body>
 </html>
 
