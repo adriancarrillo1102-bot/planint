@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>PlanINT · V11.8.36</title>
+<title>PlanINT · V11.8.37</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -4986,6 +4986,9 @@ svg[data-local-icon]{
   </div>
 </div>
 <script src="src/data/availability.js"></script>
+<script src="src/data/calendar-records.js"></script>
+<script src="src/data/period-summary.js"></script>
+<script src="src/data/activity-copy.js"></script>
 <script src="src/data/activity-actions.js"></script>
 <link rel="stylesheet" href="src/ui/time-blocks.css">
 <script src="src/data/import-validation.js"></script>
@@ -5843,7 +5846,8 @@ function prioritySort(a,b){return (a.status==='missed'?0:a.status==='postponed'?
 function natureLabel(t){return t.nature==='recurrent'||t.recurrenceMasterId?'Recurrente':'Única'}
 function completionLabel(t){return t.status==='done'?'Terminada':t.status==='missed'?'Planeada no realizada':t.status==='postponed'?'Actividad pospuesta':t.status==='scheduled'?'Programada':t.status==='progress'?'En curso':t.tentativeDate?'Con fecha compromiso':'Pendiente'}
 function stateClass(t){return t.status==='missed'?'missed':t.status==='postponed'?'important':t.status==='done'?'done':t.status==='scheduled'?'scheduled':t.tentativeDate?'scheduled':'pending'}
-function planRecordForDate(t,ds){return (t.scheduleHistory||[]).slice().reverse().find(s=>s.date===ds&&['active','completed','completed_late','completed_early','missed'].includes(s.result))||null}
+function calendarRecordsForTask(t){return window.PlanINTCalendarRecords.records(t,parseDuration)}
+function planRecordForDate(t,ds){return calendarRecordsForTask(t).find(s=>s.date===ds)||null}
 function scheduleCompletionResult(plannedDate,completedDate){
   if(!plannedDate||!completedDate)return'completed';
   return completedDate<plannedDate?'completed_early':completedDate>plannedDate?'completed_late':'completed';
@@ -5976,7 +5980,7 @@ window.selectBankOrigin=id=>{bankSelectedOriginId=id;renderBank();icons()};
 /* V10: versión anterior de renderProjects retirada */
 
 
-function schedulesForDate(ds){return visibleTasks().filter(t=>(t.scheduleHistory||[]).some(s=>s.date===ds&&['active','completed','completed_late','completed_early','missed'].includes(s.result))).map(t=>({t,s:planRecordForDate(t,ds)})).filter(x=>x.s)}
+function schedulesForDate(ds){return visibleTasks().map(t=>({t,s:planRecordForDate(t,ds)})).filter(x=>x.s)}
 function plannedMinutesOnDate(ds,workOnly=false){return schedulesForDate(ds).filter(x=>x.t.intake!=='unplanned'&&(!workOnly||x.t.scope==='work')).reduce((a,x)=>a+resolvedPlannedMinutes(x.t,x.s),0)}
 function effectiveMinutesOnDate(ds,workOnly=false){return visibleTasks().filter(t=>t.status==='done'&&t.completedDate===ds&&(!workOnly||t.scope==='work')).reduce((a,t)=>a+(Number(t.actualMinutes)||parseDuration(t.time)||0),0)}
 function unplannedMinutesOnDate(ds){return visibleTasks().filter(t=>t.intake==='unplanned'&&((t.completedDate||planRecordForDate(t,ds)?.date)===ds||planRecordForDate(t,ds))).reduce((a,t)=>a+(Number(t.actualMinutes)||parseDuration(t.time)||0),0)}
@@ -5986,21 +5990,17 @@ function fmtHours(mins){let h=mins/60;return (Math.round(h*10)/10).toFixed(h%1?1
 
 
 
-function eventsForDate(ds){let events=[];visibleTasks().forEach(t=>{(t.scheduleHistory||[]).filter(s=>s.date===ds&&['active','completed','completed_late','completed_early','missed'].includes(s.result)).forEach(s=>events.push({kind:'task',t,a:s}))});visible(importantDates).filter(e=>e.date===ds).forEach(e=>events.push({kind:'note',e}));return events}
+function eventsForDate(ds){let events=schedulesForDate(ds).map(x=>({kind:'task',t:x.t,a:x.s}));visible(importantDates).filter(e=>e.date===ds).forEach(e=>events.push({kind:'note',e}));return events}
 window.openCalendarDay=ds=>{calendarDate=new Date(ds+'T12:00:00');calendarMode='day';renderCalendar();icons()};
 /* V10: versión anterior de monthCalendar retirada */
-function calendarTimelineState(t,s){
-  if(t?.intake==='unplanned')return'unplanned';
-  if(s?.result==='missed'||t?.status==='missed')return'missed';
-  if(scheduleCommitmentClosed(s)||t?.status==='done')return'done';
-  return'pending';
-}
+function calendarTimelineState(t,s){return window.PlanINTCalendarRecords.state(t,s)}
+function calendarStatusMarkers(events,compact=false){let labels={pending:'Planeada',done:'Terminada',missed:'No realizada',unplanned:'No planeada',rescheduled:'Reprogramada'},counts={};events.forEach(x=>{let k=calendarTimelineState(x.t,x.a);counts[k]=(counts[k]||0)+1});return '<span class="calendar-state-markers">'+Object.entries(counts).map(([k,n])=>'<span class="calendar-state-marker '+k+(compact?' compact':'')+'" title="'+labels[k]+': '+n+'" aria-label="'+labels[k]+': '+n+'"><i></i>'+(compact?'':n)+'</span>').join('')+'</span>'}
 function calendarTimelineDuration(t,s){
-  if(t?.intake==='unplanned'&&t?.status==='done')return Number(t.actualMinutes)||resolvedPlannedMinutes(t,s)||parseDuration(t.time)||0;
+  if((s?.executionOnly||t?.intake==='unplanned')&&t?.status==='done')return Number(t.actualMinutes)||resolvedPlannedMinutes(t,s)||parseDuration(t.time)||0;
   return resolvedPlannedMinutes(t,s)||parseDuration(t?.time||'')||0;
 }
 function calendarTimelineStart(t,s,ds){
-  let raw=minutesFromTime((t?.intake==='unplanned'&&t?.actualStart)||s?.start||'00:00'),interval=availabilityGrossInterval(t?.scope,ds);
+  let raw=minutesFromTime((s?.executionOnly&&s?.start)||(t?.intake==='unplanned'&&t?.actualStart)||s?.start||'00:00'),interval=availabilityGrossInterval(t?.scope,ds);
   return scheduleNormalizeStartForAvailability(raw,interval);
 }
 function calendarMergedAvailabilityIntervals(ds,scopeValue=scope){return window.PlanINTAvailability.union((scopeValue==='all'?['work','personal']:[scopeValue]).flatMap(sc=>window.PlanINTAvailability.available(availabilityScheduleForScope(sc),ds)))}
@@ -6017,7 +6017,7 @@ function calendarTimelineBounds(dates){
 }
 function calendarTimelineTimeLabel(mins){return scheduleClockText(mins)}
 function calendarTimelineEventHTML(x,ds,bounds,compact=false){
-  let dur=calendarTimelineDuration(x.t,x.a);if(!dur)return'';
+  let dur=calendarTimelineDuration(x.t,x.a);if(!dur||(x.a?.executionOnly&&!x.a.start))return'';
   let st=calendarTimelineStart(x.t,x.a,ds),en=st+dur,top=(st-bounds.start)/(bounds.end-bounds.start)*100,height=dur/(bounds.end-bounds.start)*100;
   let state=calendarTimelineState(x.t,x.a),interval=availabilityGrossInterval(x.t.scope,ds),outside=!interval||st<interval.start||en>interval.end;
   let label=`${calendarTimelineTimeLabel(st)}–${calendarTimelineTimeLabel(en)} · ${x.t.name}${taskBlockedConflict(x.t,x.a)?' · Conflicto con bloqueo de disponibilidad':''}`;
@@ -6037,6 +6037,7 @@ function calendarTimelineAxisHTML(bounds){
 function dayCalendar(){
   let ds=isoDate(calendarDate),evs=eventsForDate(ds),bounds=calendarTimelineBounds([ds]),minutes=bounds.end-bounds.start,height=Math.max(660,minutes/60*64);
   let taskEvents=evs.filter(x=>x.kind==='task'),notes=evs.filter(x=>x.kind==='note').map(x=>`<div class="cal-event note">★ ${esc(x.e.name)}</div>`).join('');
+  notes+=taskEvents.filter(x=>x.a.executionOnly&&!x.a.start).map(x=>`<button class="btn" onclick="openTaskDetail(${x.t.id},'calendar')">✓ ${esc(x.t.name)} · ${fmtHours(calendarTimelineDuration(x.t,x.a))} realizadas · Sin hora registrada</button>`).join('');
   let blocks=taskEvents.map(x=>calendarTimelineEventHTML(x,ds,bounds,false)).join('');
   return `${habitDateRowsHTML(ds)}${notes?`<div class="calendar-day-notes">${notes}</div>`:''}<div class="calendar-timeline-legend"><span><i class="pending"></i>Tiempo planeado pendiente</span><span><i class="done"></i>Planeadas realizadas</span><span><i class="unplanned"></i>Actividades no planeadas</span><span><i class="missed"></i>No realizadas</span></div><div class="calendar-day-scroll"><div class="calendar-day-timeline" style="height:${height}px"><div class="cal-time-axis">${calendarTimelineAxisHTML(bounds)}</div><div class="cal-day-lane">${calendarTimelineAvailabilityHTML(ds,bounds)}${calendarTimelineGridHTML(bounds)}${blocks||'<div class="cal-timeline-empty">Sin actividades en este día</div>'}</div></div></div>`;
 }
@@ -6105,6 +6106,8 @@ function scheduleProposalState(){
     let existingEnd=existingStart+resolvedPlannedMinutes(x.t,x.s);
     return proposalStart<existingEnd&&proposalEnd>existingStart;
   });
+  let realConflict=scheduleUnplannedEntriesForDate(date,t.scope).filter(x=>String(x.id)!==String(t.id)&&x.actualStart).find(x=>{let st=scheduleNormalizeStartForAvailability(minutesFromTime(x.actualStart),interval);return proposalStart<st+(Number(x.actualMinutes)||parseDuration(x.time)||0)&&proposalEnd>st});
+  if(realConflict)conflicts.push({t:realConflict,s:{start:realConflict.actualStart,duration:(Number(realConflict.actualMinutes)||parseDuration(realConflict.time)||0)+' min'}});
   let conflict=conflicts[0]||null,hasConflict=!!conflict;
   let occupied=existing.reduce((a,x)=>a+resolvedPlannedMinutes(x.t,x.s),0);
   let unplanned=scheduleUnplannedEntriesForDate(date,t.scope).reduce((a,x)=>a+(Number(x.actualMinutes)||parseDuration(x.time)||0),0);
@@ -6285,7 +6288,7 @@ document.getElementById('taskProject').onchange=syncTaskScopeFromOrigin;document
 document.getElementById('newProjectBtn').onclick=()=>openOriginModal(null,'project');document.getElementById('newManagementBtn').onclick=()=>openOriginModal(null,'management');document.getElementById('saveProject').onclick=saveOrigin;document.getElementById('archiveOriginBtn').onclick=toggleOriginArchive;document.querySelectorAll('.close-project').forEach(b=>b.onclick=()=>{document.getElementById('projectType').disabled=false;closeModal('projectModal');if(originReturnToTask){originReturnToTask=false;updateTaskCreatePresentation();openModal('taskModal');icons()}});
 document.querySelectorAll('.close-activity-detail').forEach(b=>b.onclick=()=>closeModal('activityDetailModal'));document.getElementById('activityDetailOrigin').onchange=()=>{let oid=document.getElementById('activityDetailOrigin').value,o=originById(oid),isProject=o?.type==='project',isManagement=o?.type==='management';document.querySelectorAll('.project-detail-structure-field').forEach(e=>e.classList.toggle('hidden',!isProject));document.querySelectorAll('.management-detail-category-field').forEach(e=>e.classList.toggle('hidden',!isManagement));refreshStructureSelects(oid,'','','detail');refreshManagementCategoryField(oid,'','detail')};document.getElementById('activityDetailMilestone').onchange=()=>refreshStructureSelects(document.getElementById('activityDetailOrigin').value,document.getElementById('activityDetailMilestone').value,'','detail');document.getElementById('activityDetailDelete').onclick=()=>{if(window.PlanINTCloud?.deleteActivity)window.PlanINTCloud.deleteActivity();else alert('Espera a que termine de cargar tu cuenta.')};document.getElementById('activityDetailSave').onclick=()=>saveActivityDetail(true);document.getElementById('activityDetailChecklist').onclick=()=>{let id=taskDetailId;closeModal('activityDetailModal');openChecklistModal(id)};document.getElementById('activityDetailProgram').onclick=()=>{if(saveActivityDetail(false)){closeModal('activityDetailModal');openScheduleModal(taskDetailId)}};document.getElementById('activityDetailPostpone').onclick=()=>postponeTask(taskDetailId);document.getElementById('activityDetailComplete').onclick=()=>{let id=taskDetailId;closeModal('activityDetailModal');openCompletion(id)};
 document.querySelectorAll('.close-completion').forEach(b=>b.onclick=()=>closeModal('completionModal'));document.getElementById('completionActualStart').addEventListener('change',updateCompletionTimePresentation);document.getElementById('completionActualEnd').addEventListener('change',updateCompletionTimePresentation);document.getElementById('completionDate').addEventListener('change',updateCompletionDateTile);document.getElementById('completionComments').addEventListener('input',e=>document.getElementById('completionCommentsCount').textContent=String(e.target.value.length));document.getElementById('confirmCompletion').onclick=()=>{let t=tasks.find(x=>x.id===completionTaskId);if(!t)return;let date=document.getElementById('completionDate').value,actualStart=document.getElementById('completionActualStart').value,actualEnd=document.getElementById('completionActualEnd').value,mins=realExecutionMinutes(actualStart,actualEnd),comments=document.getElementById('completionComments').value.trim(),st=checklistStats(t);if(!date)return alert('Captura la fecha de realización.');if(!actualStart)return alert('Captura la hora real de inicio.');if(!actualEnd)return alert('Captura la hora real de terminación.');if(!mins)return alert('La hora real de inicio y terminación deben formar un periodo válido.');if(t.checklistEnabled&&st.pending&&!confirm(`Quedan ${st.pending} pasos pendientes. ¿Confirmas cerrar la actividad de todas formas?`))return;let a=currentScheduleRecord(t);if(a){a.result=scheduleCompletionResult(a.date,date);a.completedAt=new Date().toISOString();a.completedDate=date}else{let last=(t.scheduleHistory||[]).slice().reverse().find(x=>x.result==='missed');if(last){last.result=scheduleCompletionResult(last.date,date);last.completedAt=new Date().toISOString();last.completedDate=date}}t.status='done';t.completedAt=new Date().toISOString();t.completedDate=date;t.actualStart=actualStart;t.actualEnd=actualEnd;t.actualMinutes=mins;t.closingComments=comments;save();refreshVisibleSurface();closeModal('completionModal');renderAll()};
-document.getElementById('saveSchedule').onclick=()=>{let t=tasks.find(x=>x.id===scheduleTaskId),date=document.getElementById('scheduleDate').value,start=document.getElementById('scheduleStart').value;if(!t||!date)return alert('Selecciona la fecha programada.');if(date<isoDate(new Date()))return alert('La programación debe ser para hoy o una fecha futura.');let proposal=scheduleProposalState();if(!proposal.ok)return alert(proposal.reason||'Esta actividad no puede programarse en el horario seleccionado.');let old=currentScheduleRecord(t),verb=old||t.status==='missed'?'reprogramar':'programar';if(!confirm(`¿Confirmas ${verb} “${t.name}” para ${formatDateES(date)}${start?' a las '+start:''}? Este cambio modificará tu plan.`))return;if(old){old.result='rescheduled';old.rescheduledAt=new Date().toISOString();old.changeReason=document.getElementById('scheduleChangeReason').value||'';old.relatedTaskId=document.getElementById('scheduleCauseTask').value||null}t.tentativeDate=date;t.scheduleHistory=t.scheduleHistory||[];t.scheduleHistory.push({id:uid(),date,start:start||'',duration:t.time,plannedAt:new Date().toISOString(),result:'active'});t.status='scheduled';save();calendarDate=new Date(date+'T12:00:00');refreshVisibleSurface();closeModal('scheduleModal');renderAll()};
+document.getElementById('saveSchedule').onclick=()=>{let t=tasks.find(x=>x.id===scheduleTaskId),date=document.getElementById('scheduleDate').value,start=document.getElementById('scheduleStart').value;if(!t||!date)return alert('Selecciona la fecha programada.');if(date<isoDate(new Date()))return alert('La programación debe ser para hoy o una fecha futura.');let proposal=scheduleProposalState();if(!proposal.ok)return alert(proposal.reason||'Esta actividad no puede programarse en el horario seleccionado.');let old=window.PlanINTCalendarRecords.latest(t.scheduleHistory),verb=old||t.status==='missed'?'reprogramar':'programar';if(!confirm(`¿Confirmas ${verb} “${t.name}” para ${formatDateES(date)}${start?' a las '+start:''}? Este cambio modificará tu plan.`))return;window.PlanINTCalendarRecords.retirePrevious(t,new Date().toISOString(),document.getElementById('scheduleChangeReason').value,document.getElementById('scheduleCauseTask').value);t.tentativeDate=date;t.scheduleHistory=t.scheduleHistory||[];t.scheduleHistory.push({id:uid(),date,start:start||'',duration:t.time,plannedAt:new Date().toISOString(),result:'active'});t.status='scheduled';save();calendarDate=new Date(date+'T12:00:00');refreshVisibleSurface();closeModal('scheduleModal');renderAll()};
 document.querySelectorAll('.close-unplanned').forEach(b=>b.onclick=()=>closeModal('unplannedModal'));document.getElementById('saveUnplanned').onclick=saveUnplanned;document.getElementById('unplannedSourceType').addEventListener('change',refreshUnplannedSourceOptions);
 document.getElementById('taskName')?.addEventListener('input',updateTaskCreatePresentation);
 document.getElementById('taskProject')?.addEventListener('change',updateTaskCreatePresentation);
@@ -6302,7 +6305,7 @@ const PLANINT_BACKUP_SCHEMA=1;
 let pendingBackupRestore=null;
 function backupClone(v){return JSON.parse(JSON.stringify(v))}
 function backupDataSnapshot(){return {tasks:backupClone(tasks),projects:backupClone(projects),importantDates:backupClone(importantDates),importLogs:backupClone(importLogs),projectStructures:backupClone(projectStructures),managementStructures:backupClone(managementStructures),workSchedule:backupClone(workSchedule),personalSchedule:backupClone(personalSchedule),habits:backupClone(habits),reminders:backupClone(reminders),weekBaselines:backupClone(weekBaselines)}}
-function backupPayload(){return {format:'PlanINT Backup',schemaVersion:PLANINT_BACKUP_SCHEMA,appVersion:'V11.8.36',exportedAt:new Date().toISOString(),data:backupDataSnapshot()}}
+function backupPayload(){return {format:'PlanINT Backup',schemaVersion:PLANINT_BACKUP_SCHEMA,appVersion:'V11.8.37',exportedAt:new Date().toISOString(),data:backupDataSnapshot()}}
 function backupCounts(data){return {activities:Array.isArray(data.tasks)?data.tasks.length:0,projects:Array.isArray(data.projects)?data.projects.length:0,important:Array.isArray(data.importantDates)?data.importantDates.length:0,habits:Array.isArray(data.habits)?data.habits.length:0,reminders:Array.isArray(data.reminders)?data.reminders.length:0,baselines:data.weekBaselines&&typeof data.weekBaselines==='object'?Object.keys(data.weekBaselines).length:0}}
 function backupCanonical(value){if(Array.isArray(value))return value.map(backupCanonical);if(value&&typeof value==='object'){let out={};Object.keys(value).sort().forEach(k=>{out[k]=backupCanonical(value[k])});return out}return value}
 function backupSemanticEqual(a,b){return JSON.stringify(backupCanonical(a))===JSON.stringify(backupCanonical(b))}
@@ -6919,7 +6922,7 @@ window.renderManagements=function(){let q=(document.getElementById('managementSe
         onkeydown="openCardKeyboard(event,()=>openCalendarDay('${ds}'))">
         <div class="cal-num">${d.getDate()}</div>
         ${extra?`<span class="month-focus-extra">+${extra}</span>`:''}
-        ${feature}${calendarBlockSummaryHTML(ds)}
+        ${feature}${calendarBlockSummaryHTML(ds)}${calendarStatusMarkers(tasksEv)}
         <div class="month-focus-context">
           <div class="month-focus-activity ${tasksEv.length?'':'is-empty'}"><i class="month-focus-activity-dot"></i><span>${tasksEv.length?`${tasksEv.length} actividad${tasksEv.length===1?'':'es'}`:'Sin actividades'}</span></div>
           <div class="month-load-track ${load.over?'over':''} ${load.na?'is-na':''}" title="${esc(load.label)}" aria-label="${esc(load.label)}"><span class="month-load-fill" style="width:${load.na?0:load.pct}%"></span></div>
@@ -6944,7 +6947,7 @@ window.renderManagements=function(){let q=(document.getElementById('managementSe
             let ds=`${y}-${String(mi+1).padStart(2,'0')}-${String(i+1).padStart(2,'0')}`,
                 ev=eventsForDate(ds), te=ev.filter(x=>x.kind==='task'), ne=ev.filter(x=>x.kind==='note'),
                 al=te.filter(x=>['missed','postponed'].includes(x.t.status));
-            let marks=`${te.length?'<i class="mini-marker"></i>':''}${ne.length?'<i class="mini-marker note"></i>':''}${al.length?'<i class="mini-marker alert"></i>':''}`;
+            let marks=`${calendarStatusMarkers(te,true)}${ne.length?'<i class="mini-marker note"></i>':''}${al.length?'<i class="mini-marker alert"></i>':''}`;
             return `<div class="mini-date ${ev.length?'has':''}" onclick="event.stopPropagation();openCalendarDay('${ds}')">${i+1}${availabilityBlocksForDate(ds).length?'<span class="month-block-label">▧</span>':''}${marks?`<span class="mini-markers">${marks}</span>`:''}</div>`;
           }).join('')}
         </div>
@@ -7971,7 +7974,7 @@ function bindAccountUI(){
 }
 
 bindAccountUI();
-window.PlanINTCloud={logout:logout,isHydrated:()=>hydrated,mode:'read-write',version:'11.8.36',queueSave,flush,refresh:refreshCloud,deleteImportant:deleteImportantCloudAware,deleteHabit:deleteHabitCloudAware,deleteReminder:deleteReminderCloudAware,deleteActivity:deleteActivityRecord,reset:resetPlanINT,saveProfile:saveProfileName};
+window.PlanINTCloud={logout:logout,isHydrated:()=>hydrated,mode:'read-write',version:'11.8.37',queueSave,flush,refresh:refreshCloud,deleteImportant:deleteImportantCloudAware,deleteHabit:deleteHabitCloudAware,deleteReminder:deleteReminderCloudAware,deleteActivity:deleteActivityRecord,reset:resetPlanINT,saveProfile:saveProfileName};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
 </script>
@@ -8223,6 +8226,10 @@ REQ-HAB-QUICK-05: Semana conserva funciones de capacidad/línea base y agrega se
 <script src="src/ui/time-blocks.js"></script>
 <script src="src/data/completion-actions.js"></script>
 <script src="src/ui/completion-editor.js"></script>
+<link rel="stylesheet" href="src/ui/period-summary.css">
+<script src="src/ui/period-summary.js"></script>
+<script src="src/ui/calendar-create.js"></script>
+<script src="src/ui/activity-copy.js"></script>
 </body>
 </html>
 

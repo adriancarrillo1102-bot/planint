@@ -17,6 +17,6 @@ html=html.slice(0,cloudStart)+`<script>window.QAIsolation=true;window.QAFlushCou
 const seedScript=`<script>window.QAUncaught=[];if(!sessionStorage.getItem('qaSeeded')){localStorage.clear();for(const [k,v]of Object.entries(${JSON.stringify(seed)}))localStorage.setItem(k,JSON.stringify(v));sessionStorage.setItem('qaSeeded','yes')} window.confirm=()=>true;window.alert=m=>{document.getElementById('qaErrors').textContent='Aviso de prueba: '+m};window.addEventListener('error',e=>{window.QAUncaught.push(e.message);const p=document.getElementById('qaErrors');if(p)p.textContent+=e.message+'\\n'});</script>`;
 html=html.replace('<head>','<head>'+seedScript).replace(/(src|href)="src\//g,'$1="/src/');
 html=html.replace('<body>','<body><div id="qaErrors" role="alert" style="color:#b00"></div><div style="position:fixed;bottom:0;right:0;z-index:99999;background:#fff0b8;font-size:10px">QA local · datos ficticios · sin conexión a Supabase</div>');
-html=html.replace('</body>','<script src="/tests/ui-harness.js"></script></body>');
+html=html.replace('</body>','<script src="/tests/ui-harness.js?v='+Date.now()+'"></script></body>');
 fs.writeFileSync(path.join(__dirname,'browser-fixture.html'),html);
 console.log('Synthetic browser fixture generated for '+today);
