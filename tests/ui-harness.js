@@ -14,6 +14,54 @@
   document.body.insertAdjacentHTML('beforeend','<aside style="position:fixed;bottom:8px;right:8px;z-index:100001;max-width:460px;background:white;border:2px solid #765295;padding:8px;border-radius:8px"><button id="qaRun" type="button">Ejecutar controles QA</button><pre id="qaResults" style="max-height:160px;overflow:auto;font-size:10px;white-space:pre-wrap">Pruebas aisladas, sin Supabase.</pre></aside>');
   $('qaRun').onclick=async()=>{
     $('qaRun').disabled=true;results.length=0;reset();
+    await test('Copy activity opens all editable fields, retries cloud save once and schedules without modifying original',async()=>{
+      const source=tasks.find(x=>x.id===700001),before=JSON.stringify(source),date=window.PlanINTAvailability.shift(isoDate(new Date()),1);
+      openTaskDetail(source.id);await click('activityDetailCopy');assert($('copyName').value===source.name,'Title copied');assert($('copyChecklist').value.includes('Paso de prueba'),'Checklist copied');
+      value('copyName','QA copia editable');value('copyDescription','Detalle exclusivo de la copia');value('copyPhase','Fase de la copia');value('copyHours','2');value('copyMinutes','0');value('copyDate',date);value('copyTime','08:00');
+      window.QAFailFlushAt=window.QAFlushCount+2;await click('confirmActivityCopy');assert($('copyStatus').textContent.includes('pendiente'),'Copy save failure visible');assert(tasks.filter(x=>x.name==='QA copia editable').length===1,'One pending copy');
+      window.QAFailFlushAt=0;await click('confirmActivityCopy');assert(tasks.filter(x=>x.name==='QA copia editable').length===1,'Retry does not duplicate');assert($('scheduleDate').value===date&&$('scheduleStart').value==='08:00','Copy schedule carries date and hour');await click('saveSchedule');
+      const copy=tasks.find(x=>x.name==='QA copia editable');assert(copy.status==='scheduled'&&copy.actualMinutes===0,'Independent scheduled copy');assert(copy.description==='Detalle exclusivo de la copia'&&copy.phase==='Fase de la copia','Edits saved');assert(copy.checklist[0].id!==source.checklist[0].id&&!copy.checklist[0].done,'Fresh checklist identity');assert(JSON.stringify(tasks.find(x=>x.id===source.id))===before,'Original preserved');reset();
+    });
+    await test('Copying a recurrent master is cancellable without creating an activity or modifying the series',async()=>{const before=JSON.stringify(tasks);openTaskDetail(700004);await click('activityDetailCopy');assert($('copyName').value==='QA comida recurrente','Master copied into editable form');$('activityCopyModal').querySelector('[data-close-copy]').click();assert(JSON.stringify(tasks)===before,'Cancel preserves all records')});
+    await test('Calendar double-click schedules a Bank activity at the selected date and 08:00',async()=>{
+      const ds=isoDate(new Date()),t={...JSON.parse(JSON.stringify(tasks.find(x=>x.id===700001))),id:700080,name:'QA desde Banco en calendario',status:'pending',scheduleHistory:[]};tasks.push(t);navigate('calendar');window.openCalendarDay(ds);
+      const slot=$('calendarContent').querySelector('[data-calendar-slot][data-time="08:00"]');assert(slot,'08:00 slot');slot.dispatchEvent(new MouseEvent('dblclick',{bubbles:true}));assert($('weekAddDateLabel').textContent.includes('08:00'),'Chooser carries selected time');
+      openWeekBankPicker();[...$('weekBankPickerList').querySelectorAll('button')].find(b=>b.textContent.includes(t.name)).click();await tick();assert($('scheduleDate').value===ds&&$('scheduleStart').value==='08:00','Bank selection preserves slot');await click('saveSchedule');assert(currentScheduleRecord(t).start==='08:00','Scheduled at 08:00');reset();
+    });
+    await test('Calendar double-click creates a new activity and preserves 11:00 through its form',async()=>{
+      const ds=isoDate(new Date());navigate('calendar');window.openCalendarDay(ds);$('calendarContent').querySelector('[data-calendar-slot][data-time="11:00"]').dispatchEvent(new MouseEvent('dblclick',{bubbles:true}));openWeekNewTask();
+      value('taskName','QA nueva desde calendario');value('taskProject','700010');value('taskTimeHours','1');value('taskTimeMinutes','00');await click('saveTask');assert($('scheduleStart').value==='11:00'&&$('scheduleDate').value===ds,'New activity preserves slot');await click('saveSchedule');const t=tasks.find(x=>x.name==='QA nueva desde calendario');assert(currentScheduleRecord(t)?.start==='11:00','New activity scheduled');reset();
+    });
+    await test('Calendar keyboard and touch open a slot, and reprogrammed activities use orange',async()=>{
+      const ds=isoDate(new Date());navigate('calendar');window.openCalendarDay(ds);const b=$('calendarContent').querySelector('[data-calendar-slot][data-time="14:30"]');b.click();assert($('weekAddModal').classList.contains('show'),'Keyboard click opens slot');closeModal('weekAddModal');b.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,pointerType:'touch'}));assert($('weekAddModal').classList.contains('show'),'Touch opens slot');closeModal('weekAddModal');
+      const t=tasks.find(x=>x.id===700001);t.scheduleHistory.unshift({id:700000,date:window.PlanINTAvailability.shift(ds,-1),start:'09:00',result:'rescheduled'});renderCalendar();assert($('calendarContent').querySelector('.cal-time-event.rescheduled'),'Orange class');assert($('calendarStatusLegend').textContent.includes('Naranja'),'Legend');reset();
+    });
+    await test('Reprogramming a missed activity frees the old date and keeps just one calendar event',async()=>{
+      const today=isoDate(new Date()),oldDate=window.PlanINTAvailability.shift(today,-1),t={...JSON.parse(JSON.stringify(tasks.find(x=>x.id===700001))),id:700050,name:'QA reprogramada',status:'missed',scheduleHistory:[{id:700051,date:oldDate,start:'10:00',duration:'1h',result:'missed',plannedAt:'2026-01-01T10:00:00Z',missedAt:new Date().toISOString()}]};tasks.push(t);
+      openTaskDetail(t.id);await click('activityDetailProgram');value('scheduleDate',today);value('scheduleStart','10:00');await click('saveSchedule');
+      assert(t.scheduleHistory[0].result==='rescheduled','Old missed record retired');assert(!eventsForDate(oldDate).some(x=>x.t?.id===t.id),'Old slot free');assert(eventsForDate(today).filter(x=>x.t?.id===t.id).length===1,'One current event');reset();
+    });
+    await test('Two-hour closure directly from Bank appears in Calendar and consumes exactly two hours',async()=>{
+      const t={...JSON.parse(JSON.stringify(tasks.find(x=>x.id===700001))),id:700060,name:'QA cierre directo Banco',time:'2h',status:'pending',scheduleHistory:[],checklistEnabled:false},ds=isoDate(new Date());tasks.push(t);
+      const before=trackingBreakdownForDate(ds,'work').occupied;
+      openTaskDetail(t.id);await click('activityDetailComplete');assert($('completionActualStart').value&&$('completionActualEnd').value,'Default actual hours');value('completionDate',ds);value('completionActualStart','14:00');value('completionActualEnd','16:00');await click('confirmCompletion');
+      assert(eventsForDate(ds).filter(x=>x.t?.id===t.id).length===1,'Closed event visible');assert(trackingBreakdownForDate(ds,'work').occupied-before===120,'Exactly two hours occupied');
+      navigate('calendar');window.openCalendarDay(ds);assert($('calendarContent').textContent.includes(t.name),'Rendered in daily calendar');reset();
+    });
+    await test('Summary defaults to current week, navigates weeks, months and years and honors scope',async()=>{
+      navigate('dashboard');value('summaryPeriod','week');await click('summaryCurrent');const initialTitle=$('summaryPeriodTitle').textContent;
+      await click('summaryPrevious');assert($('summaryPeriodTitle').textContent!==initialTitle,'Previous week');await click('summaryNext');assert($('summaryPeriodTitle').textContent===initialTitle,'Next week');
+      value('summaryPeriod','month');assert($('summaryPeriodTitle').textContent.startsWith('Mes'),'Month');await click('summaryPrevious');await click('summaryCurrent');
+      value('summaryPeriod','year');assert($('summaryPeriodTitle').textContent.startsWith('Año'),'Year');await click('summaryNext');await click('summaryCurrent');
+      setScope('work');assert($('summaryPeriodCaption').textContent.startsWith('Laboral'),'Scope');assert($('dashboardScopeMix').textContent.includes('Sin asignación'),'Free capacity row');value('summaryMeasure','actual');assert($('dashboardScopeMix').textContent.includes('únicamente actividades terminadas'),'Actual-only mode');
+      value('summaryPeriod','week');value('summaryMeasure','combined');setScope('all');await click('summaryCurrent');
+    });
+    await test('Visual reports export real PNG, self-contained HTML with table, and SVG',async()=>{
+      const create=URL.createObjectURL,anchorClick=HTMLAnchorElement.prototype.click,blobs=[];
+      try{URL.createObjectURL=function(blob){blobs.push(blob);return create.call(URL,blob)};HTMLAnchorElement.prototype.click=function(){};
+        for(const format of ['png','html','svg']){value('summaryReportFormat',format);await $('summaryDownload').onclick();assert($('summaryReportStatus').textContent==='Reporte descargado.','Download '+format);const blob=blobs.at(-1);if(format==='png'){const a=new Uint8Array(await blob.arrayBuffer());assert(a[0]===137&&a[1]===80&&a[2]===78&&a[3]===71,'PNG signature')}else{const text=await blob.text();assert(text.includes('<svg'),'SVG chart');if(format==='html')assert(text.includes('<table>')&&text.includes('window.print()'),'Printable full report')}}
+      }finally{URL.createObjectURL=create;HTMLAnchorElement.prototype.click=anchorClick;value('summaryReportFormat','png')}
+    });
     await test('Navigation and scope controls',async()=>{
       for(const b of document.querySelectorAll('#sidebar [data-view]')){b.click();await tick();assert(document.querySelector('.view.active')?.id===b.dataset.view,'Navigation '+b.dataset.view)}
       for(const b of document.querySelectorAll('[data-scope]')){b.click();await tick();assert(scope===b.dataset.scope,'Scope '+b.dataset.scope)}

@@ -14,7 +14,13 @@
     if(pending){openModal(pendingButton==='confirmCompletion'?'completionModal':'reopenCompletionModal');return}
     const t=tasks.find(x=>String(x.id)===String(id));if(!t)return;
     editing=t.status==='done';
-    if(!editing)originalOpen(id);
+    if(!editing){
+      originalOpen(id);
+      if(!t.scheduleHistory?.length){
+        const end=new Date(),duration=parseDuration(t.time||'')||0,start=new Date(end.getTime()-duration*60000),hh=d=>String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+        if(duration){$('completionDate').value=isoDate(start);$('completionActualStart').value=hh(start);$('completionActualEnd').value=hh(end);updateCompletionDateTile();updateCompletionTimePresentation()}
+      }
+    }
     else{
       completionTaskId=t.id;$('completionTaskName').textContent=t.name;$('completionTaskDescription').textContent=t.description||'';
       $('completionTaskMeta').textContent=t.scope==='work'?'Laboral':'Personal';
@@ -24,6 +30,7 @@
       updateCompletionDateTile();updateCompletionTimePresentation();openModal('completionModal');
     }
     $('completionModal').querySelector('.modal-head h3').textContent=editing?'Corregir realización':'Confirmar cierre de actividad';
+    $('completionModal').querySelector('.modal-subtitle').textContent=!t.scheduleHistory?.length?'El cierre aparecerá en Calendario y contará como tiempo utilizado. Verifica las horas reales.':'Registra la ejecución real de esta actividad';
     $('completionTaskStatus').textContent=editing?'Terminada':'Por cerrar';
     $('confirmCompletion').textContent=editing?'Guardar corrección':'Confirmar cierre';$('completionEditStatus').textContent='';
   };
