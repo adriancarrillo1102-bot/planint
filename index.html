@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>PlanINT · V11.8.38</title>
+<title>PlanINT · V11.8.39</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -4987,6 +4987,7 @@ svg[data-local-icon]{
 </div>
 <script src="src/data/availability.js"></script>
 <script src="src/data/calendar-records.js"></script>
+<script src="src/data/project-gantt.js"></script>
 <script src="src/data/reminder-agenda.js"></script>
 <script src="src/data/period-summary.js"></script>
 <script src="src/data/activity-copy.js"></script>
@@ -6311,7 +6312,7 @@ const PLANINT_BACKUP_SCHEMA=1;
 let pendingBackupRestore=null;
 function backupClone(v){return JSON.parse(JSON.stringify(v))}
 function backupDataSnapshot(){return {tasks:backupClone(tasks),projects:backupClone(projects),importantDates:backupClone(importantDates),importLogs:backupClone(importLogs),projectStructures:backupClone(projectStructures),managementStructures:backupClone(managementStructures),workSchedule:backupClone(workSchedule),personalSchedule:backupClone(personalSchedule),habits:backupClone(habits),reminders:backupClone(reminders),weekBaselines:backupClone(weekBaselines)}}
-function backupPayload(){return {format:'PlanINT Backup',schemaVersion:PLANINT_BACKUP_SCHEMA,appVersion:'V11.8.38',exportedAt:new Date().toISOString(),data:backupDataSnapshot()}}
+function backupPayload(){return {format:'PlanINT Backup',schemaVersion:PLANINT_BACKUP_SCHEMA,appVersion:'V11.8.39',exportedAt:new Date().toISOString(),data:backupDataSnapshot()}}
 function backupCounts(data){return {activities:Array.isArray(data.tasks)?data.tasks.length:0,projects:Array.isArray(data.projects)?data.projects.length:0,important:Array.isArray(data.importantDates)?data.importantDates.length:0,habits:Array.isArray(data.habits)?data.habits.length:0,reminders:Array.isArray(data.reminders)?data.reminders.length:0,baselines:data.weekBaselines&&typeof data.weekBaselines==='object'?Object.keys(data.weekBaselines).length:0}}
 function backupCanonical(value){if(Array.isArray(value))return value.map(backupCanonical);if(value&&typeof value==='object'){let out={};Object.keys(value).sort().forEach(k=>{out[k]=backupCanonical(value[k])});return out}return value}
 function backupSemanticEqual(a,b){return JSON.stringify(backupCanonical(a))===JSON.stringify(backupCanonical(b))}
@@ -7981,7 +7982,7 @@ function bindAccountUI(){
 }
 
 bindAccountUI();
-window.PlanINTCloud={logout:logout,isHydrated:()=>hydrated,mode:'read-write',version:'11.8.38',queueSave,flush,refresh:refreshCloud,deleteImportant:deleteImportantCloudAware,deleteHabit:deleteHabitCloudAware,deleteReminder:deleteReminderCloudAware,deleteActivity:deleteActivityRecord,reset:resetPlanINT,saveProfile:saveProfileName};
+window.PlanINTCloud={logout:logout,isHydrated:()=>hydrated,mode:'read-write',version:'11.8.39',queueSave,flush,refresh:refreshCloud,deleteImportant:deleteImportantCloudAware,deleteHabit:deleteHabitCloudAware,deleteReminder:deleteReminderCloudAware,deleteActivity:deleteActivityRecord,reset:resetPlanINT,saveProfile:saveProfileName};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
 </script>
@@ -8239,6 +8240,8 @@ REQ-HAB-QUICK-05: Semana conserva funciones de capacidad/línea base y agrega se
 <script src="src/ui/activity-copy.js"></script>
 <link rel="stylesheet" href="src/ui/reminder-agenda.css">
 <script src="src/ui/reminder-agenda.js"></script>
+<link rel="stylesheet" href="src/ui/project-gantt.css">
+<script src="src/ui/project-gantt.js"></script>
 </body>
 </html>
 
