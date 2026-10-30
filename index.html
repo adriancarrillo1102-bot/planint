@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>PlanINT · V11.8.37</title>
+<title>PlanINT · V11.8.38</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -4987,6 +4987,7 @@ svg[data-local-icon]{
 </div>
 <script src="src/data/availability.js"></script>
 <script src="src/data/calendar-records.js"></script>
+<script src="src/data/reminder-agenda.js"></script>
 <script src="src/data/period-summary.js"></script>
 <script src="src/data/activity-copy.js"></script>
 <script src="src/data/activity-actions.js"></script>
@@ -5754,14 +5755,18 @@ function openUnplannedForDate(ds){
   icons();
 }
 
+function remindersForDate(ds){return window.PlanINTReminderAgenda?.forDate(reminders,ds,scope)||[]}
+function remindersAgendaHTML(ds){return window.PlanINTReminderViews?.list(ds)||''}
+function remindersBadgeHTML(ds,compact=false){return window.PlanINTReminderViews?.badge(ds,compact)||''}
+function remindersTimelineHTML(ds,bounds,compact=false){return window.PlanINTReminderViews?.timeline(ds,bounds,compact)||''}
 function trackingDayCard(dt){
   let ds=isoDate(dt),all=schedulesForDate(ds),planned=all.filter(x=>x.t.intake!=='unplanned'),unplanned=all.filter(x=>x.t.intake==='unplanned'),label=dt.toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'}),canPlan=ds>=isoDate(new Date());
   taskDetailContext='tracking';
   let scopeName=scope==='work'?'Laboral':scope==='personal'?'Personal':'General',dayCap=availabilityCapacityForScope(scope,ds);
   let ring=capacityRingHTML(trackingBreakdownForDate(ds),`Tiempo disponible ${scopeName.toLowerCase()} del día · ${fmtHours(dayCap)}`);
   return `${ring}<div class="card tracking-day-card">
-    <div class="tracking-day-head"><div><h3>${label.charAt(0).toUpperCase()+label.slice(1)}</h3><small>${planned.length+unplanned.length} actividades del día</small></div></div>
-    <div class="tracking-group"><div class="tracking-group-title planned"><span class="tracking-group-title-main"><i data-lucide="calendar-check-2"></i>Actividades planeadas</span>${canPlan?`<button class="icon-btn tracking-group-add" type="button" title="Agregar actividad planeada" aria-label="Agregar actividad planeada para ${label}" onclick="openWeekAdd('${ds}')"><i data-lucide="plus"></i></button>`:''}</div><div class="task-list">${planned.length?planned.map(x=>(taskBlockedConflict(x.t,x.s)?'<div class="block-conflict-warning">Conflicto con bloqueo de disponibilidad: reprograma esta actividad.</div>':'')+taskHTML(x.t,true,x.s)).join(''):'<div class="empty">Sin actividades planeadas</div>'}</div></div>
+    <div class="tracking-day-head"><div><h3>${label.charAt(0).toUpperCase()+label.slice(1)}</h3><small>${planned.length+unplanned.length} actividades del día${remindersForDate(ds).length?' · '+remindersForDate(ds).length+' recordatorios':''}</small></div></div>
+    ${remindersAgendaHTML(ds)}<div class="tracking-group"><div class="tracking-group-title planned"><span class="tracking-group-title-main"><i data-lucide="calendar-check-2"></i>Actividades planeadas</span>${canPlan?`<button class="icon-btn tracking-group-add" type="button" title="Agregar actividad planeada" aria-label="Agregar actividad planeada para ${label}" onclick="openWeekAdd('${ds}')"><i data-lucide="plus"></i></button>`:''}</div><div class="task-list">${planned.length?planned.map(x=>(taskBlockedConflict(x.t,x.s)?'<div class="block-conflict-warning">Conflicto con bloqueo de disponibilidad: reprograma esta actividad.</div>':'')+taskHTML(x.t,true,x.s)).join(''):'<div class="empty">Sin actividades planeadas</div>'}</div></div>
     <div class="tracking-group-separator"></div>
     <div class="tracking-group"><div class="tracking-group-title unplanned"><span class="tracking-group-label"><i data-lucide="zap"></i>Actividades no planeadas</span><button class="icon-btn tracking-group-add" type="button" title="Registrar actividad no planeada" aria-label="Registrar actividad no planeada para ${label}" onclick="openUnplannedForDate('${ds}')"><i data-lucide="plus"></i></button></div><div class="task-list">${unplanned.length?unplanned.map(x=>taskHTML(x.t,true,x.s)).join(''):'<div class="empty">Sin actividades no planeadas</div>'}</div></div>
   </div>`;
@@ -6008,6 +6013,7 @@ function calendarTimelineBounds(dates){
   let start=360,end=1320;
   (dates||[]).forEach(d=>{
     let ds=typeof d==='string'?d:isoDate(d);
+    remindersForDate(ds).filter(r=>window.PlanINTReminderAgenda.validTime(r.time)).forEach(r=>{let m=minutesFromTime(r.time);start=Math.min(start,m);end=Math.max(end,m+30)});
     calendarMergedAvailabilityIntervals(ds,scope).concat(availabilityBlocksForDate(ds)).forEach(x=>{start=Math.min(start,x.start);end=Math.max(end,x.end)});
     eventsForDate(ds).filter(x=>x.kind==='task').forEach(x=>{let st=calendarTimelineStart(x.t,x.a,ds),dur=calendarTimelineDuration(x.t,x.a);start=Math.min(start,st);end=Math.max(end,st+dur)});
   });
@@ -6039,7 +6045,7 @@ function dayCalendar(){
   let taskEvents=evs.filter(x=>x.kind==='task'),notes=evs.filter(x=>x.kind==='note').map(x=>`<div class="cal-event note">★ ${esc(x.e.name)}</div>`).join('');
   notes+=taskEvents.filter(x=>x.a.executionOnly&&!x.a.start).map(x=>`<button class="btn" onclick="openTaskDetail(${x.t.id},'calendar')">✓ ${esc(x.t.name)} · ${fmtHours(calendarTimelineDuration(x.t,x.a))} realizadas · Sin hora registrada</button>`).join('');
   let blocks=taskEvents.map(x=>calendarTimelineEventHTML(x,ds,bounds,false)).join('');
-  return `${habitDateRowsHTML(ds)}${notes?`<div class="calendar-day-notes">${notes}</div>`:''}<div class="calendar-timeline-legend"><span><i class="pending"></i>Tiempo planeado pendiente</span><span><i class="done"></i>Planeadas realizadas</span><span><i class="unplanned"></i>Actividades no planeadas</span><span><i class="missed"></i>No realizadas</span></div><div class="calendar-day-scroll"><div class="calendar-day-timeline" style="height:${height}px"><div class="cal-time-axis">${calendarTimelineAxisHTML(bounds)}</div><div class="cal-day-lane">${calendarTimelineAvailabilityHTML(ds,bounds)}${calendarTimelineGridHTML(bounds)}${blocks||'<div class="cal-timeline-empty">Sin actividades en este día</div>'}</div></div></div>`;
+  return `${habitDateRowsHTML(ds)}${remindersAgendaHTML(ds)}${notes?`<div class="calendar-day-notes">${notes}</div>`:''}<div class="calendar-timeline-legend"><span><i class="pending"></i>Tiempo planeado pendiente</span><span><i class="done"></i>Planeadas realizadas</span><span><i class="unplanned"></i>Actividades no planeadas</span><span><i class="missed"></i>No realizadas</span></div><div class="calendar-day-scroll"><div class="calendar-day-timeline" style="height:${height}px"><div class="cal-time-axis">${calendarTimelineAxisHTML(bounds)}</div><div class="cal-day-lane">${calendarTimelineAvailabilityHTML(ds,bounds)}${calendarTimelineGridHTML(bounds)}${remindersTimelineHTML(ds,bounds)}${blocks||'<div class="cal-timeline-empty">Sin actividades en este día</div>'}</div></div></div>`;
 }
 /* V10: versión anterior de weekCalendar retirada */
 function renderCalendar(){document.getElementById('calendarScopeText').textContent=scopeLabel()+' · '+scopeSubtitle();document.querySelectorAll('.cal-mode').forEach(b=>b.classList.toggle('active',b.dataset.mode===calendarMode));let opts={day:{weekday:'long',day:'numeric',month:'long',year:'numeric'},month:{month:'long',year:'numeric'},year:{year:'numeric'}};let title=calendarMode==='week'?(()=>{let s=startOfWeek(calendarDate),e=new Date(s);e.setDate(s.getDate()+6);return `Semana ${s.toLocaleDateString('es-MX',{day:'numeric',month:'short'})} – ${e.toLocaleDateString('es-MX',{day:'numeric',month:'short',year:'numeric'})}`})():calendarDate.toLocaleDateString('es-MX',opts[calendarMode]||opts.month);document.getElementById('calendarTitle').textContent=title.charAt(0).toUpperCase()+title.slice(1);document.getElementById('calendarContent').innerHTML='<div class="calendar-block-legend">▧ Violeta: bloqueo de disponibilidad · Borde punteado: actividad en conflicto</div>'+(calendarMode==='day'?dayCalendar():calendarMode==='week'?weekCalendar():calendarMode==='year'?yearCalendar():monthCalendar());icons()}
@@ -6305,7 +6311,7 @@ const PLANINT_BACKUP_SCHEMA=1;
 let pendingBackupRestore=null;
 function backupClone(v){return JSON.parse(JSON.stringify(v))}
 function backupDataSnapshot(){return {tasks:backupClone(tasks),projects:backupClone(projects),importantDates:backupClone(importantDates),importLogs:backupClone(importLogs),projectStructures:backupClone(projectStructures),managementStructures:backupClone(managementStructures),workSchedule:backupClone(workSchedule),personalSchedule:backupClone(personalSchedule),habits:backupClone(habits),reminders:backupClone(reminders),weekBaselines:backupClone(weekBaselines)}}
-function backupPayload(){return {format:'PlanINT Backup',schemaVersion:PLANINT_BACKUP_SCHEMA,appVersion:'V11.8.37',exportedAt:new Date().toISOString(),data:backupDataSnapshot()}}
+function backupPayload(){return {format:'PlanINT Backup',schemaVersion:PLANINT_BACKUP_SCHEMA,appVersion:'V11.8.38',exportedAt:new Date().toISOString(),data:backupDataSnapshot()}}
 function backupCounts(data){return {activities:Array.isArray(data.tasks)?data.tasks.length:0,projects:Array.isArray(data.projects)?data.projects.length:0,important:Array.isArray(data.importantDates)?data.importantDates.length:0,habits:Array.isArray(data.habits)?data.habits.length:0,reminders:Array.isArray(data.reminders)?data.reminders.length:0,baselines:data.weekBaselines&&typeof data.weekBaselines==='object'?Object.keys(data.weekBaselines).length:0}}
 function backupCanonical(value){if(Array.isArray(value))return value.map(backupCanonical);if(value&&typeof value==='object'){let out={};Object.keys(value).sort().forEach(k=>{out[k]=backupCanonical(value[k])});return out}return value}
 function backupSemanticEqual(a,b){return JSON.stringify(backupCanonical(a))===JSON.stringify(backupCanonical(b))}
@@ -6917,12 +6923,12 @@ window.renderManagements=function(){let q=(document.getElementById('managementSe
       }
       let extra=Math.max(0,notes.length-1)+(featured?alerts.length:Math.max(0,alerts.length-1));
       html+=`<div class="cal-day month-focus-day ${muted?'muted':''} ${ds===today?'today':''}" role="button" tabindex="0"
-        aria-label="${esc(formatDateES(ds))}. ${notes.length} fechas importantes, ${alerts.length} incidencias, ${tasksEv.length} actividades. ${esc(load.label)}"
+        aria-label="${esc(formatDateES(ds))}. ${notes.length} fechas importantes, ${alerts.length} incidencias, ${tasksEv.length} actividades, ${remindersForDate(ds).length} recordatorios. ${esc(load.label)}"
         onclick="openCalendarDay('${ds}')"
         onkeydown="openCardKeyboard(event,()=>openCalendarDay('${ds}'))">
         <div class="cal-num">${d.getDate()}</div>
         ${extra?`<span class="month-focus-extra">+${extra}</span>`:''}
-        ${feature}${calendarBlockSummaryHTML(ds)}${calendarStatusMarkers(tasksEv)}
+        ${feature}${calendarBlockSummaryHTML(ds)}${remindersBadgeHTML(ds)}${calendarStatusMarkers(tasksEv)}
         <div class="month-focus-context">
           <div class="month-focus-activity ${tasksEv.length?'':'is-empty'}"><i class="month-focus-activity-dot"></i><span>${tasksEv.length?`${tasksEv.length} actividad${tasksEv.length===1?'':'es'}`:'Sin actividades'}</span></div>
           <div class="month-load-track ${load.over?'over':''} ${load.na?'is-na':''}" title="${esc(load.label)}" aria-label="${esc(load.label)}"><span class="month-load-fill" style="width:${load.na?0:load.pct}%"></span></div>
@@ -6947,7 +6953,7 @@ window.renderManagements=function(){let q=(document.getElementById('managementSe
             let ds=`${y}-${String(mi+1).padStart(2,'0')}-${String(i+1).padStart(2,'0')}`,
                 ev=eventsForDate(ds), te=ev.filter(x=>x.kind==='task'), ne=ev.filter(x=>x.kind==='note'),
                 al=te.filter(x=>['missed','postponed'].includes(x.t.status));
-            let marks=`${calendarStatusMarkers(te,true)}${ne.length?'<i class="mini-marker note"></i>':''}${al.length?'<i class="mini-marker alert"></i>':''}`;
+            let marks=`${calendarStatusMarkers(te,true)}${remindersBadgeHTML(ds,true)}${ne.length?'<i class="mini-marker note"></i>':''}${al.length?'<i class="mini-marker alert"></i>':''}`;
             return `<div class="mini-date ${ev.length?'has':''}" onclick="event.stopPropagation();openCalendarDay('${ds}')">${i+1}${availabilityBlocksForDate(ds).length?'<span class="month-block-label">▧</span>':''}${marks?`<span class="mini-markers">${marks}</span>`:''}</div>`;
           }).join('')}
         </div>
@@ -6958,9 +6964,9 @@ window.renderManagements=function(){let q=(document.getElementById('managementSe
   /* Semana del calendario: escritorio conserva agenda; móvil usa lista vertical. */
 window.weekCalendar=function(){
   let start=startOfWeek(calendarDate),dates=Array.from({length:7},(_,i)=>{let d=new Date(start);d.setDate(start.getDate()+i);return d}),habitPanel=habitWeekPanelHTML(dates),bounds=calendarTimelineBounds(dates),minutes=bounds.end-bounds.start,height=Math.max(620,minutes/60*52);
-  let headers=dates.map(d=>{let ds=isoDate(d),notes=eventsForDate(ds).filter(x=>x.kind==='note');return `<button type="button" class="cal-week-day-head ${ds===isoDate(new Date())?'today':''}" onclick="openCalendarDay('${ds}')"><strong>${d.toLocaleDateString('es-MX',{weekday:'short'})}</strong><span>${d.getDate()}</span>${notes.length?`<small>★ ${notes.length}</small>`:''}</button>`}).join('');
-  let lanes=dates.map(d=>{let ds=isoDate(d),events=eventsForDate(ds).filter(x=>x.kind==='task');return `<div class="cal-week-lane" data-date="${ds}">${calendarTimelineAvailabilityHTML(ds,bounds)}${calendarTimelineGridHTML(bounds)}${events.map(x=>calendarTimelineEventHTML(x,ds,bounds,true)).join('')}</div>`}).join('');
-  return `${habitPanel}<div class="calendar-timeline-legend calendar-week-legend"><span><i class="pending"></i>Tiempo planeado pendiente</span><span><i class="done"></i>Planeadas realizadas</span><span><i class="unplanned"></i>Actividades no planeadas</span><span><i class="missed"></i>No realizadas</span></div><div class="calendar-week-scroll"><div class="calendar-week-shell" style="--cal-week-height:${height}px"><div class="cal-week-corner"></div>${headers}<div class="cal-week-axis" style="height:${height}px">${calendarTimelineAxisHTML(bounds)}</div><div class="cal-week-lanes" style="height:${height}px">${lanes}</div></div></div>`;
+  let headers=dates.map(d=>{let ds=isoDate(d),notes=eventsForDate(ds).filter(x=>x.kind==='note');return `<button type="button" class="cal-week-day-head ${ds===isoDate(new Date())?'today':''}" onclick="openCalendarDay('${ds}')"><strong>${d.toLocaleDateString('es-MX',{weekday:'short'})}</strong><span>${d.getDate()}</span>${notes.length?`<small>★ ${notes.length}</small>`:''}${remindersBadgeHTML(ds)}</button>`}).join('');
+  let lanes=dates.map(d=>{let ds=isoDate(d),events=eventsForDate(ds).filter(x=>x.kind==='task');return `<div class="cal-week-lane" data-date="${ds}">${calendarTimelineAvailabilityHTML(ds,bounds)}${calendarTimelineGridHTML(bounds)}${events.map(x=>calendarTimelineEventHTML(x,ds,bounds,true)).join('')}${remindersTimelineHTML(ds,bounds,true)}</div>`}).join('');
+  return `${habitPanel}${window.PlanINTReminderViews?.week(dates)||''}<div class="calendar-timeline-legend calendar-week-legend"><span><i class="pending"></i>Tiempo planeado pendiente</span><span><i class="done"></i>Planeadas realizadas</span><span><i class="unplanned"></i>Actividades no planeadas</span><span><i class="missed"></i>No realizadas</span></div><div class="calendar-week-scroll"><div class="calendar-week-shell" style="--cal-week-height:${height}px"><div class="cal-week-corner"></div>${headers}<div class="cal-week-axis" style="height:${height}px">${calendarTimelineAxisHTML(bounds)}</div><div class="cal-week-lanes" style="height:${height}px">${lanes}</div></div></div>`;
 };
 
   /* Seguimiento semanal móvil: nunca 7 columnas estrechas. */
@@ -7361,6 +7367,7 @@ function saveReminder(){
   editingReminderId=null;
   renderRemindersAdmin();
   closeModal('remindersModal');
+  renderAll();refreshVisibleSurface();
 }
 function deleteReminder(){
   if(!editingReminderId)return;
@@ -7974,7 +7981,7 @@ function bindAccountUI(){
 }
 
 bindAccountUI();
-window.PlanINTCloud={logout:logout,isHydrated:()=>hydrated,mode:'read-write',version:'11.8.37',queueSave,flush,refresh:refreshCloud,deleteImportant:deleteImportantCloudAware,deleteHabit:deleteHabitCloudAware,deleteReminder:deleteReminderCloudAware,deleteActivity:deleteActivityRecord,reset:resetPlanINT,saveProfile:saveProfileName};
+window.PlanINTCloud={logout:logout,isHydrated:()=>hydrated,mode:'read-write',version:'11.8.38',queueSave,flush,refresh:refreshCloud,deleteImportant:deleteImportantCloudAware,deleteHabit:deleteHabitCloudAware,deleteReminder:deleteReminderCloudAware,deleteActivity:deleteActivityRecord,reset:resetPlanINT,saveProfile:saveProfileName};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
 </script>
@@ -8230,6 +8237,8 @@ REQ-HAB-QUICK-05: Semana conserva funciones de capacidad/línea base y agrega se
 <script src="src/ui/period-summary.js"></script>
 <script src="src/ui/calendar-create.js"></script>
 <script src="src/ui/activity-copy.js"></script>
+<link rel="stylesheet" href="src/ui/reminder-agenda.css">
+<script src="src/ui/reminder-agenda.js"></script>
 </body>
 </html>
 
