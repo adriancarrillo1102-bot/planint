@@ -155,6 +155,13 @@
     await test('Reminders create, edit and administrative navigation',async()=>{
       await click('navRemindersBtn');await click('remindersAdminNew');value('reminderTitle','QA recordatorio');value('reminderDate',isoDate(new Date()));value('reminderTime','18:30');await click('saveReminderBtn');const r=reminders.find(x=>x.title==='QA recordatorio');assert(r,'Created');window.PlanINTEntityEditors.editReminder(r.id);value('reminderTitle','QA recordatorio editado');await click('saveReminderBtn');assert(r.title==='QA recordatorio editado','Edited');await click('remindersAdminViewUpcoming');document.querySelector('.close-reminders')?.click();navigate('remindersAdmin');await click('remindersAdminBack');
     });
+    await test('Reminder appears in Calendar, Today and Week and editing updates its hour without consuming capacity',async()=>{
+      const r=reminders.find(x=>x.title==='QA recordatorio editado'),ds=r.date;setScope(r.scope);const occupied=trackingBreakdownForDate(ds).occupied;
+      navigate('calendar');window.openCalendarDay(ds);assert($('calendarContent').textContent.includes(r.title),'Day list visible');assert($('calendarContent').querySelector('[data-reminder-time="18:30"]'),'Timed reminder marker');
+      $('calendarContent').querySelector('[data-agenda-reminder="'+r.id+'"]').click();value('reminderTime','19:00');await click('saveReminderBtn');assert($('calendarContent').querySelector('[data-reminder-time="19:00"]'),'Saved hour refreshed');
+      navigate('tracking');await click('trackingTodayBtn');assert($('trackingPlanner').textContent.includes(r.title),'Today card visible');await click('trackingWeekBtn');assert($('trackingPlanner').textContent.includes(r.title),'Week card visible');assert(trackingBreakdownForDate(ds).occupied===occupied,'Reminders consume no hours');
+      window.PlanINTEntityEditors.editReminder(r.id);check('reminderActive',false);await click('saveReminderBtn');navigate('calendar');window.openCalendarDay(ds);assert(!$('calendarContent').textContent.includes(r.title),'Inactive hidden');setScope('all');
+    });
     await test('Backup contains blocks, restore validates and preserves all collections',async()=>{
       document.querySelectorAll('.modal-backdrop').forEach(e=>e.classList.remove('show'));const b=backupPayload();assert(b.data.workSchedule.timeBlocks.length===1,'Backup includes blocks');assert(validateBackupPayload(b).ok,'Valid backup');
       renderBackupRestorePreview(b,'qa-backup.json');await click('confirmBackupRestore');assert(backupSemanticEqual(b.data,backupDataSnapshot()),'Restore exact');assert($('qaErrors').textContent.includes('guardada en la nube'),'Success after flush');

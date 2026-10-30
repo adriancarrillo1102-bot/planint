@@ -1,0 +1,22 @@
+(function(){
+  'use strict';const $=id=>document.getElementById(id),A=window.PlanINTReminderAgenda;
+  const label=sc=>sc==='work'?'Laboral':sc==='personal'?'Personal':'General';
+  function row(r,showDate=false){return `<button type="button" class="agenda-reminder-row" data-agenda-reminder="${esc(r.id)}" aria-label="${esc('Abrir recordatorio: '+r.title+' · '+r.date+' · '+(r.time||'Sin hora'))}"><span class="agenda-reminder-bell" aria-hidden="true">🔔</span><span class="agenda-reminder-copy"><b>${esc(r.title)}</b><small>${showDate?esc(formatDateES(r.date))+' · ':''}${esc(A.validTime(r.time)?r.time:'Sin hora')} · ${label(r.scope)} · Recordatorio</small>${r.note?`<span>${esc(r.note)}</span>`:''}</span><span aria-hidden="true">›</span></button>`}
+  function list(date){const items=A.forDate(reminders,date,scope);return items.length?`<section class="agenda-reminders" aria-label="Recordatorios del ${esc(date)}"><div class="agenda-reminder-heading"><span>🔔 Recordatorios</span><b>${items.length}</b></div>${items.map(r=>row(r)).join('')}</section>`:''}
+  function week(dates){const items=dates.flatMap(d=>A.forDate(reminders,typeof d==='string'?d:isoDate(d),scope));return items.length?`<section class="agenda-reminders" aria-label="Recordatorios de la semana"><div class="agenda-reminder-heading"><span>🔔 Recordatorios de la semana</span><b>${items.length}</b></div><div class="agenda-reminder-grid">${items.map(r=>row(r,true)).join('')}</div></section>`:''}
+  function badge(date,compact=false){const n=A.forDate(reminders,date,scope).length;return n?`<span class="agenda-reminder-badge ${compact?'compact':''}" title="${n} recordatorio${n===1?'':'s'}" aria-label="${n} recordatorio${n===1?'':'s'}">🔔${compact?'':` ${n} recordatorio${n===1?'':'s'}`}</span>`:''}
+  function timeline(date,bounds,compact=false){return A.atTimes(reminders,date,scope).map(g=>{
+    const top=(g.minute-bounds.start)/(bounds.end-bounds.start)*100;
+    return `<button type="button" class="cal-reminder-marker ${compact?'compact':''}" style="top:${Math.max(0,top)}%" data-reminder-date="${esc(date)}" data-reminder-time="${g.time}" title="${esc(g.time+' · '+g.items.map(r=>r.title).join(' · '))}" aria-label="${esc(g.time+' · '+g.items.length+' recordatorio'+(g.items.length===1?'':'s')+': '+g.items.map(r=>r.title).join(', '))}"><span aria-hidden="true">🔔</span> ${g.time} · ${esc(g.items[0].title)}${g.items.length>1?' (+'+(g.items.length-1)+')':''}</button>`;
+  }).join('')}
+  document.body.insertAdjacentHTML('beforeend','<div class="modal-backdrop" id="agendaReminderModal"><div class="modal"><div class="modal-head"><div><h3>Recordatorios</h3><small id="agendaReminderDate"></small></div><button class="icon-btn" type="button" data-close-reminder-agenda aria-label="Cerrar recordatorios">×</button></div><div class="modal-body" id="agendaReminderItems"></div><div class="modal-foot"><button class="btn" data-close-reminder-agenda type="button">Cerrar</button></div></div></div>');
+  document.addEventListener('click',e=>{
+    const edit=e.target.closest('[data-agenda-reminder]');if(edit){e.stopPropagation();closeModal('agendaReminderModal');window.PlanINTEntityEditors?.editReminder(edit.dataset.agendaReminder);return}
+    const marker=e.target.closest('[data-reminder-date]');if(marker){e.stopPropagation();const ds=marker.dataset.reminderDate,time=marker.dataset.reminderTime,items=A.forDate(reminders,ds,scope).filter(r=>!time||r.time===time);if(items.length===1){window.PlanINTEntityEditors?.editReminder(items[0].id);return}$('agendaReminderDate').textContent=formatDateES(ds)+(time?' · '+time:'');$('agendaReminderItems').innerHTML=items.map(r=>row(r)).join('');openModal('agendaReminderModal')}
+  });
+  document.querySelectorAll('[data-close-reminder-agenda]').forEach(b=>b.onclick=()=>closeModal('agendaReminderModal'));
+  window.PlanINTReminderViews={list,week,badge,timeline};
+  const baseDashboard=renderDashboard;
+  renderDashboard=function(){baseDashboard();let panel=$('summaryReminderAgenda');if(!panel){$('dashboard').insertAdjacentHTML('beforeend','<div id="summaryReminderAgenda"></div>');panel=$('summaryReminderAgenda')}const anchor=$('summaryAnchor')?.value||isoDate(new Date()),period=$('summaryPeriod')?.value||'week',range=window.PlanINTPeriodSummary.range(period,anchor),dates=window.PlanINTPeriodSummary.days(range);panel.innerHTML=week(dates).replaceAll('Recordatorios de la semana','Recordatorios del periodo')};
+  renderDashboard();renderCalendar();
+})();
