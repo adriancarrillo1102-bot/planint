@@ -38,11 +38,11 @@ test('Actual calendar, weekly capacity and scheduling load share one projection 
  assert.equal(c.trackingBreakdownForDate('2026-10-26').occupied,0);
 });
 test('Existing duplicated history releases the old day in the actual calendar and availability totals',()=>{const c=appContext([{id:10,scope:'work',intake:'planned',status:'scheduled',scheduleHistory:[old,fresh]}]);assert.equal(c.eventsForDate('2026-10-26').length,0);assert.equal(c.trackingBreakdownForDate('2026-10-26').occupied,0);assert.equal(c.eventsForDate('2026-10-28').length,1);assert.equal(c.trackingBreakdownForDate('2026-10-28').occupied,120)});
-test('The real reprogramming button retires a missed record and retains its history through cloud serialization',()=>{
+test('The real reprogramming button retires a missed record and retains its history through cloud serialization',async()=>{
  const html=fs.readFileSync(require.resolve('../index.html'),'utf8'),line=html.split('\n').find(x=>x.startsWith("document.getElementById('saveSchedule').onclick="));
- const task={id:10,status:'missed',time:'2h',scheduleHistory:[{...old}]},fields={saveSchedule:{},scheduleDate:{value:'2026-10-28'},scheduleStart:{value:'10:00'},scheduleChangeReason:{value:'Otra actividad'},scheduleCauseTask:{value:'30'}};
- const ctx={tasks:[task],scheduleTaskId:10,window:{PlanINTCalendarRecords:A},document:{getElementById:id=>fields[id]},isoDate:()=> '2026-10-28',scheduleProposalState:()=>({ok:true}),confirm:()=>true,formatDateES:x=>x,uid:()=>2,save(){},refreshVisibleSurface(){},closeModal(){},renderAll(){},alert:m=>{throw Error(m)}};
- vm.createContext(ctx);vm.runInContext(line,ctx);fields.saveSchedule.onclick();
+ const task={id:10,status:'missed',time:'2h',scheduleHistory:[{...old}]},fields={saveSchedule:{dataset:{}},scheduleDate:{value:'2026-10-28'},scheduleStart:{value:'10:00'},scheduleChangeReason:{value:'Otra actividad'},scheduleCauseTask:{value:'30'}};
+ const ctx={tasks:[task],scheduleTaskId:10,window:{PlanINTCalendarRecords:A,PlanINTScheduleConfirmation:{ask:async()=>true,error:m=>{throw Error(m)}}},document:{getElementById:id=>fields[id]},isoDate:()=> '2026-10-28',scheduleProposalState:()=>({ok:true}),renderScheduleDayLoad(){},confirm:()=>true,formatDateES:x=>x,uid:()=>2,save(){},refreshVisibleSurface(){},closeModal(){},renderAll(){},alert:m=>{throw Error(m)}};
+ vm.createContext(ctx);vm.runInContext(line,ctx);await fields.saveSchedule.onclick();
  const restored=JSON.parse(JSON.stringify(task));assert.equal(restored.scheduleHistory[0].result,'rescheduled');assert.equal(restored.scheduleHistory[0].missedAt,old.missedAt);assert.equal(restored.scheduleHistory.length,2);assert.equal(A.records(restored,parse).length,1);assert.equal(A.records(restored,parse)[0].date,'2026-10-28');
 });
 test('Calendar color precedence: planned grey, reprogrammed orange, missed red, completed green and unplanned yellow',()=>{
